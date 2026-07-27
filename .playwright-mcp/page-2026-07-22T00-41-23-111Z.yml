@@ -1,0 +1,26 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - link "eGovBridgeAI" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e5]:
+        - heading "Your bridge to government services." [level=1] [ref=e6]
+        - paragraph [ref=e7]: Sign in once with your mobile number to file reports, chat with the AI assistant, and summarize documents.
+        - list [ref=e8]:
+          - listitem [ref=e9]: Submit Report
+          - listitem [ref=e13]: My Reports
+          - listitem [ref=e17]: AI Assistant
+          - listitem [ref=e21]: Document Summarizer
+      - paragraph [ref=e25]: © 2026 eGovBridgeAI
+    - generic [ref=e27]:
+      - generic [ref=e32]:
+        - heading "Sign in" [level=2] [ref=e33]
+        - paragraph [ref=e34]: Enter your mobile number to receive a one-time code.
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40]: Mobile number
+          - textbox "Mobile number" [active] [ref=e41]:
+            - /placeholder: "+639090000000"
+        - button "Send code" [ref=e42]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e48] [cursor=pointer]
