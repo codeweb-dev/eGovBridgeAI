@@ -67,11 +67,26 @@ export async function POST(request: Request) {
     const userProfile: Record<string, string> = {
       phone: profile.phone,
       full_name: profile.fullName,
+      role: "user",
     };
     if (profile.email) userProfile.email = profile.email;
     if (profile.gender) userProfile.gender = profile.gender;
 
-    const { data: user, error } = await getSupabaseAdmin()
+    const supabase = getSupabaseAdmin();
+    const { data: existingUser, error: lookupError } = await supabase
+      .from("users")
+      .select("role")
+      .eq("phone", profile.phone)
+      .maybeSingle();
+    if (lookupError) throw new Error("Could not check the user account.");
+    if (existingUser?.role === "admin") {
+      return Response.json(
+        { error: "Admin accounts must use the admin login." },
+        { status: 403 },
+      );
+    }
+
+    const { data: user, error } = await supabase
       .from("users")
       .upsert(userProfile, { onConflict: "phone" })
       .select("id")
