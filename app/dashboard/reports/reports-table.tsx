@@ -71,6 +71,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { LatLng } from "@/components/location-map";
+import { ListPagination } from "@/components/list-pagination";
+import { PAGE_SIZE } from "@/lib/pagination";
 import { reportMatchesSearch } from "@/lib/report-search";
 import { StatusBadge } from "./status-badge";
 import { deleteReport, updateReport } from "./actions";
@@ -303,6 +305,7 @@ export function ReportsTable({
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: (row, _columnId, value) =>
       reportMatchesSearch(row.original, String(value)),
+    initialState: { pagination: { pageIndex: 0, pageSize: PAGE_SIZE } },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -339,7 +342,10 @@ export function ReportsTable({
         <Input
           placeholder="Search reference, reporter, title, details…"
           value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
+          onChange={(e) => {
+            setGlobalFilter(e.target.value);
+            table.setPageIndex(0);
+          }}
           className="pl-9"
         />
       </div>
@@ -394,32 +400,11 @@ export function ReportsTable({
         </Table>
       </div>
 
-      {table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      <ListPagination
+        page={table.getState().pagination.pageIndex}
+        pageCount={table.getPageCount()}
+        onPageChange={table.setPageIndex}
+      />
 
       <Dialog
         open={selected !== null}

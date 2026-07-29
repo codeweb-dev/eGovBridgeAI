@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Markdown } from "@/components/markdown";
+import { ListPagination } from "@/components/list-pagination";
+import { paginate } from "@/lib/pagination";
 import {
   CopyButton,
   SpeakButton,
@@ -199,7 +201,9 @@ export function Chat({
   const [sending, setSending] = useState(false);
   const [phase, setPhase] = useState(0);
   const [showHistory, setShowHistory] = useState(true);
+  const [historyPage, setHistoryPage] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const historyPagination = paginate(chats, historyPage);
 
   useEffect(() => {
     if (!sending) return;
@@ -244,6 +248,7 @@ export function Chat({
         { role: "assistant", content: entry.response },
       ]);
       setChats((prev) => [entry, ...prev]);
+      setHistoryPage(0);
       setActiveId(entry.id);
     } catch (err) {
       toast.error(
@@ -321,7 +326,7 @@ export function Chat({
                 Your past questions will show up here.
               </p>
             ) : (
-              groupByDay(chats).map(([label, group]) => (
+              groupByDay(historyPagination.items).map(([label, group]) => (
                 <div key={label} className="mb-4">
                   <p className="px-2 pb-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
                     {label}
@@ -353,6 +358,12 @@ export function Chat({
               ))
             )}
           </div>
+          <ListPagination
+            page={historyPagination.page}
+            pageCount={historyPagination.pageCount}
+            onPageChange={setHistoryPage}
+            className="border-t p-3"
+          />
         </aside>
       )}
 

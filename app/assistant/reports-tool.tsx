@@ -12,6 +12,8 @@ import {
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ListPagination } from "@/components/list-pagination";
+import { paginate } from "@/lib/pagination";
 import { reportMatchesSearch } from "@/lib/report-search";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +55,7 @@ export function ReportsTool({
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState(initialQuery);
+  const [requestedPage, setRequestedPage] = useState(0);
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,6 +68,7 @@ export function ReportsTool({
   const matches = useMemo(() => {
     return reports.filter((report) => reportMatchesSearch(report, query));
   }, [reports, query]);
+  const pagination = paginate(matches, requestedPage);
 
   const pinned = useMemo(
     () =>
@@ -125,7 +129,10 @@ export function ReportsTool({
             <Input
               autoFocus
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setRequestedPage(0);
+              }}
               placeholder="Search any report information…"
               className="pl-9"
             />
@@ -177,7 +184,7 @@ export function ReportsTool({
           </p>
         ) : (
           <ul className="divide-y">
-            {matches.map((r) => (
+            {pagination.items.map((r) => (
               <li key={r.id}>
                 <button
                   type="button"
@@ -210,6 +217,15 @@ export function ReportsTool({
               </li>
             ))}
           </ul>
+        )}
+
+        {mode !== "map" && matches.length > 0 && (
+          <ListPagination
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            onPageChange={setRequestedPage}
+            className="border-t bg-muted/20 px-4 py-2.5"
+          />
         )}
 
         {reports.length > 0 && (
