@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { dashboardCards } from "../dashboard/cards";
+import { EVerifyLogin } from "./everify-login";
 
 const steps = [
   {
@@ -287,6 +288,17 @@ export default function LoginPage() {
               )}
             </motion.div>
           </AnimatePresence>
+
+          {step === "phone" && (
+            <div className="mt-7 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <EVerifyLogin />
+            </div>
+          )}
         </div>
 
         <p className="max-w-sm text-center text-xs text-muted-foreground">
