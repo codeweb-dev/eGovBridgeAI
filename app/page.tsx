@@ -36,9 +36,9 @@ const steps = [
 
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col bg-background text-foreground">
+    <div className="flex flex-1 flex-col">
       <header className="w-full border-b py-1">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4">
           <Logo className="h-14" />
           <nav className="hidden items-center gap-6 text-xs font-medium text-muted-foreground sm:flex">
             <a href="#features" className="hover:text-foreground">
@@ -60,12 +60,12 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="relative overflow-hidden px-6 py-20 sm:py-28">
+      <section className="relative overflow-hidden px-6 py-20 sm:py-38">
         <div
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle,_color-mix(in_oklch,var(--primary)_25%,transparent)_1px,_transparent_1px)] [background-size:22px_22px]"
+          className="pointer-events-none absolute inset-0 -z-10"
           aria-hidden
         />
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2">
           <div>
             <Badge className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
               <ShieldCheck data-icon="inline-start" />
@@ -141,8 +141,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="features" className="relative bg-muted/40 px-6 py-20">
-        <div className="mx-auto max-w-6xl">
+      <section id="features" className="relative px-6 py-20">
+        <div className="mx-auto max-w-7xl">
           <div className="max-w-xl">
             <h2 className="text-3xl font-bold tracking-tight">
               Everything in one place
@@ -167,7 +167,7 @@ export default function Home() {
       </section>
 
       <section id="how-it-works" className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-7xl">
           <h2 className="text-3xl font-bold tracking-tight">How it works</h2>
           <div className="mt-10 grid gap-8 sm:grid-cols-3">
             {steps.map(({ number, title, description }) => (
@@ -183,7 +183,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="security" className="bg-muted/40 px-6 py-20">
+      <section id="security" className="px-6 py-20">
         <div className="mx-auto max-w-3xl text-center">
           <ShieldCheck className="mx-auto size-8 text-primary" />
           <h2 className="mt-4 text-3xl font-bold tracking-tight">
@@ -199,7 +199,7 @@ export default function Home() {
       </section>
 
       <section className="px-6 pb-20">
-        <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 px-8 py-14 text-center text-white sm:px-16">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 px-8 py-14 text-center text-white sm:px-16">
           <h2 className="text-3xl font-bold tracking-tight">
             Ready to get started?
           </h2>
