@@ -68,6 +68,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import type { LatLng } from "@/components/location-map";
+import { detectAssistantToolIntent } from "@/lib/assistant-intent";
 import { ReportTool } from "./report-tool";
 import { ReportsTool, type ReportsMode } from "./reports-tool";
 import {
@@ -99,31 +100,27 @@ interface ChatMessage {
 
 /** Handled by an inline tool, not sent to the model. */
 const TOOLS: Record<
-  string,
-  { tool: Tool; reply: string; tag: string; icon: LucideIcon }
+  Tool,
+  { reply: string; tag: string; icon: LucideIcon }
 > = {
-  "How do I file a report?": {
-    tool: "report",
+  report: {
     tag: "Form",
     icon: ClipboardList,
     reply:
       "I can file it for you right here — three quick steps and it goes straight to the right agency.",
   },
-  "List all my reports": {
-    tool: "list",
+  list: {
     tag: "List",
     icon: ListChecks,
     reply: "Here's everything you've filed, newest first.",
   },
-  "Search for a report": {
-    tool: "search",
+  search: {
     tag: "Search",
     icon: Search,
     reply:
       "Search by reference number, title, category, or status — I'll filter as you type.",
   },
-  "Show all my reports on the map": {
-    tool: "map",
+  map: {
     tag: "Map",
     icon: MapPin,
     reply:
@@ -213,14 +210,15 @@ export function Chat({
     if (!question || sending) return;
     stopSpeaking();
     // Every entry point routes through here, so the tool intercept lives here too.
-    const match = TOOLS[question];
+    const intent = detectAssistantToolIntent(question);
+    const match = intent ? TOOLS[intent] : null;
     if (match) {
       setPrompt("");
       setActiveId(null);
       setMessages((prev) => [
         ...prev,
         { role: "user", content: question },
-        { role: "assistant", content: match.reply, tool: match.tool },
+        { role: "assistant", content: match.reply, tool: intent! },
       ]);
       return;
     }
@@ -389,7 +387,8 @@ export function Chat({
             <div className="mt-8 grid w-full max-w-lg gap-2 sm:grid-cols-2">
               {SUGGESTIONS.map((s) => {
                 // Tool prompts open a card instead of answering — say so up front.
-                const tool = TOOLS[s];
+                const intent = detectAssistantToolIntent(s);
+                const tool = intent ? TOOLS[intent] : null;
                 return (
                   <button
                     key={s}

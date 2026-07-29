@@ -1,8 +1,11 @@
 "use client";
 
-import { useMapEvents } from "react-leaflet";
+import { useEffect } from "react";
+import { useMap, useMapEvents } from "react-leaflet";
+import { GovernmentServicesLayer } from "@/components/government-services-layer";
 import {
   Map,
+  MapFullscreenControl,
   MapLocateControl,
   MapMarker,
   MapTileLayer,
@@ -21,15 +24,29 @@ function ClickToPin({ onPick }: { onPick: (p: LatLng) => void }) {
   return null;
 }
 
+function FocusOnPin({ value }: { value: LatLng | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (value && map.getZoom() < 13) map.flyTo(value, 14);
+  }, [map, value]);
+
+  return null;
+}
+
 /** Read-only when `onChange` is omitted. Dynamically import this — Leaflet needs `window`. */
 export default function LocationMap({
   value,
   onChange,
   className,
+  governmentServices = false,
+  serviceContext = "",
 }: {
   value: LatLng | null;
   onChange?: (p: LatLng) => void;
   className?: string;
+  governmentServices?: boolean;
+  serviceContext?: string;
 }) {
   return (
     <Map
@@ -39,6 +56,11 @@ export default function LocationMap({
     >
       <MapTileLayer />
       <MapZoomControl />
+      <MapFullscreenControl position="right-2 top-2" />
+      <FocusOnPin value={value} />
+      {governmentServices && (
+        <GovernmentServicesLayer origin={value} context={serviceContext} />
+      )}
       {onChange && (
         <>
           <ClickToPin onPick={onChange} />

@@ -424,6 +424,8 @@ export function ReportTool({
                 <LocationMap
                   value={pin}
                   onChange={handlePin}
+                  governmentServices
+                  serviceContext={`${form.subject} ${form.message}`}
                   className="z-0 h-56 min-h-0 rounded-xl border"
                 />
                 <p className="text-xs text-muted-foreground">

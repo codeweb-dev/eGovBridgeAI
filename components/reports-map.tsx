@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import { MapPinIcon } from "lucide-react";
+import { GovernmentServicesLayer } from "@/components/government-services-layer";
 import {
   Map,
   MapFullscreenControl,
@@ -54,6 +55,7 @@ export default function ReportsMap({
       <MapZoomControl />
       <MapFullscreenControl />
       <FitToPins reports={reports} />
+      <GovernmentServicesLayer />
       {reports.map((r, i) => (
         <MapMarker
           key={r.id}

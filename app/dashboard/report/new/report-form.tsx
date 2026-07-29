@@ -391,6 +391,8 @@ export function ReportForm({
             <LocationMap
               value={pin}
               onChange={handlePin}
+              governmentServices
+              serviceContext={`${subject} ${message}`}
               className="z-0 h-64 min-h-0 rounded-xl border"
             />
             <p className="text-xs text-muted-foreground">
