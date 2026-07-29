@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   type ColumnDef,
@@ -15,6 +16,7 @@ import {
 import { ArrowUpDown, ClipboardList, Plus, Search } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableHeader,
@@ -40,7 +42,14 @@ export interface Report {
   description: string;
   status: string;
   created_at: string;
+  latitude: number | null;
+  longitude: number | null;
 }
+
+const LocationMap = dynamic(() => import("@/components/location-map"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-48 w-full rounded-xl" />,
+});
 
 const columns: ColumnDef<Report>[] = [
   {
@@ -255,6 +264,12 @@ export function ReportsTable({ reports }: { reports: Report[] }) {
                 <p className="whitespace-pre-wrap text-muted-foreground">
                   {selected.description}
                 </p>
+                {selected.latitude !== null && selected.longitude !== null && (
+                  <LocationMap
+                    value={[selected.latitude, selected.longitude]}
+                    className="z-0 h-48 min-h-0 rounded-xl border"
+                  />
+                )}
               </div>
             </>
           )}

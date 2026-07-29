@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
@@ -16,6 +17,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { LatLng } from "@/components/location-map";
 import {
   getReportTypes,
   getRegions,
@@ -23,12 +25,23 @@ import {
   getMunicipalities,
   getBarangays,
   submitReport,
+  resolveLocation,
 } from "./actions";
+
+// Leaflet touches `window` on import, so the map can only load in the browser.
+const LocationMap = dynamic(() => import("@/components/location-map"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full rounded-xl" />,
+});
 
 interface Option {
   id: string;
   name: string;
 }
+
+// Base UI reads labels for the trigger from `items`, not from the rendered SelectItems.
+const toItems = (options: Option[]) =>
+  options.map((o) => ({ value: o.id, label: o.name }));
 
 export function ReportForm({
   initialFirstName,
@@ -58,8 +71,10 @@ export function ReportForm({
   const [provinceCode, setProvinceCode] = useState("");
   const [municipalityCode, setMunicipalityCode] = useState("");
   const [barangayCode, setBarangayCode] = useState("");
+  const [pin, setPin] = useState<LatLng | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [locating, setLocating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -96,6 +111,32 @@ export function ReportForm({
     setBarangays(value ? await getBarangays(value) : []);
   }
 
+  async function handlePin(position: LatLng) {
+    setPin(position);
+    setLocating(true);
+    try {
+      const found = await resolveLocation(position[0], position[1]);
+      if (!found.region) {
+        toast.info("Couldn't match that pin to a region — pick the area manually.");
+        return;
+      }
+      setRegionCode(found.region.id);
+      setProvinces(found.provinces ?? []);
+      setProvinceCode(found.province?.id ?? "");
+      setMunicipalities(found.municipalities ?? []);
+      setMunicipalityCode(found.municipality?.id ?? "");
+      setBarangays(found.barangays ?? []);
+      setBarangayCode(found.barangay?.id ?? "");
+
+      if (found.barangay) toast.success("Location filled in from your pin.");
+      else toast.info("Filled in what we could match — finish the rest manually.");
+    } catch {
+      toast.error("Location lookup failed. Pick the area manually.");
+    } finally {
+      setLocating(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (
@@ -129,6 +170,9 @@ export function ReportForm({
         province_code: provinceCode,
         municipality_code: municipalityCode,
         barangay_code: barangayCode,
+        category_name: reportTypes.find((t) => t.code === reportType)?.name,
+        latitude: pin?.[0] ?? null,
+        longitude: pin?.[1] ?? null,
       });
       toast.success(`Report submitted. Case number: ${result.case_number}`);
       router.push("/dashboard/reports");
@@ -189,7 +233,11 @@ export function ReportForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Report Category</Label>
-            <Select value={reportType} onValueChange={(v) => setReportType(v ?? "")}>
+            <Select
+              items={reportTypes.map((t) => ({ value: t.code, label: t.name }))}
+              value={reportType}
+              onValueChange={(v) => setReportType(v ?? "")}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
@@ -220,7 +268,7 @@ export function ReportForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Region</Label>
-              <Select value={regionCode} onValueChange={handleRegionChange}>
+              <Select items={toItems(regions)} value={regionCode} onValueChange={handleRegionChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select region" />
                 </SelectTrigger>
@@ -235,7 +283,7 @@ export function ReportForm({
             </div>
             <div className="space-y-2">
               <Label>Province</Label>
-              <Select value={provinceCode} onValueChange={handleProvinceChange} disabled={!regionCode}>
+              <Select items={toItems(provinces)} value={provinceCode} onValueChange={handleProvinceChange} disabled={!regionCode}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select province" />
                 </SelectTrigger>
@@ -253,7 +301,7 @@ export function ReportForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Municipality</Label>
-              <Select value={municipalityCode} onValueChange={handleMunicipalityChange} disabled={!provinceCode}>
+              <Select items={toItems(municipalities)} value={municipalityCode} onValueChange={handleMunicipalityChange} disabled={!provinceCode}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select municipality" />
                 </SelectTrigger>
@@ -268,7 +316,7 @@ export function ReportForm({
             </div>
             <div className="space-y-2">
               <Label>Barangay</Label>
-              <Select value={barangayCode} onValueChange={(v) => setBarangayCode(v ?? "")} disabled={!municipalityCode}>
+              <Select items={toItems(barangays)} value={barangayCode} onValueChange={(v) => setBarangayCode(v ?? "")} disabled={!municipalityCode}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select barangay" />
                 </SelectTrigger>
@@ -283,6 +331,39 @@ export function ReportForm({
             </div>
           </div>
 
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label>Pin the exact spot (optional)</Label>
+              {pin && (
+                <button
+                  type="button"
+                  onClick={() => setPin(null)}
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Clear pin
+                </button>
+              )}
+            </div>
+            <LocationMap
+              value={pin}
+              onChange={handlePin}
+              className="z-0 h-64 min-h-0 rounded-xl border"
+            />
+            <p className="text-xs text-muted-foreground">
+              {locating ? (
+                "Looking up the address…"
+              ) : pin ? (
+                <>
+                  Pinned at{" "}
+                  <span className="font-mono">
+                    {pin[0].toFixed(5)}, {pin[1].toFixed(5)}
+                  </span>
+                </>
+              ) : (
+                "Click the map to drop a pin, or use the locate button."
+              )}
+            </p>
+          </div>
         </div>
       </Section>
 
