@@ -7,3 +7,8 @@ export async function logout() {
   await clearSession();
   redirect("/login");
 }
+
+export async function adminLogout() {
+  await clearSession();
+  redirect("/admin/login");
+}

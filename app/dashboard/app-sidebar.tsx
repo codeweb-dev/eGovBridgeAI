@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Bot,
   Sparkles,
+  ShieldCheck,
   LogOut,
   User,
 } from "lucide-react";
@@ -25,8 +26,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { logout } from "./actions";
-import { Logo } from "@/components/logo";
+import { adminLogout, logout } from "./actions";
 import Image from "next/image";
 
 const links = [
@@ -47,10 +47,19 @@ const links = [
   },
 ];
 
+const adminLinks = [
+  {
+    href: "/admin",
+    label: "Admin Dashboard",
+    icon: ShieldCheck,
+    hidden: false,
+  },
+];
+
 /** Header label for the current section, so the top bar isn't just a trigger. */
 export function PageTitle() {
   const pathname = usePathname();
-  const current = links.find((l) => l.href === pathname);
+  const current = [...links, ...adminLinks].find((l) => l.href === pathname);
   return (
     <span className="truncate text-sm font-medium">
       {current?.label ?? "Dashboard"}
@@ -62,19 +71,25 @@ export function AppSidebar({
   name,
   phone,
   initials,
+  admin = false,
 }: {
   name: string;
   phone: string;
   initials: string;
+  admin?: boolean;
 }) {
   const pathname = usePathname();
+  const navLinks = admin ? adminLinks : links;
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
+            <SidebarMenuButton
+              size="lg"
+              render={<Link href={admin ? "/admin" : "/dashboard"} />}
+            >
               {/* The logo's three colors, same mark the landing page uses. */}
               <span
                 aria-hidden
@@ -100,11 +115,11 @@ export function AppSidebar({
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="font-mono text-[10px] tracking-[0.18em] uppercase">
-            Services
+            {admin ? "Administration" : "Services"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {links
+              {navLinks
                 .filter((l) => !l.hidden)
                 .map(({ href, label, icon: Icon }) => (
                   <SidebarMenuItem key={href}>
@@ -141,7 +156,7 @@ export function AppSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <form action={logout}>
+            <form action={admin ? adminLogout : logout}>
               <SidebarMenuButton type="submit" tooltip="Logout">
                 <LogOut />
                 <span>Logout</span>
