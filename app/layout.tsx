@@ -30,6 +30,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       className={`${poppins.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
+      data-scroll-behavior="smooth"
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider

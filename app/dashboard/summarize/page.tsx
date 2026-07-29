@@ -7,9 +7,9 @@ export default async function SummarizePage() {
   if (!userId) redirect("/login");
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">Document Summarizer</h1>
+    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-6">
+      <h1 className="text-2xl font-bold tracking-tighter">Document Summarizer</h1>
       <Summarizer />
-    </main>
+    </div>
   );
 }

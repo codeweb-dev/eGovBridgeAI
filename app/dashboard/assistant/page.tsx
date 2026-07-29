@@ -20,9 +20,9 @@ export default async function AssistantPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">AI Assistant</h1>
+    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-6">
+      <h1 className="text-2xl font-bold tracking-tighter">AI Assistant</h1>
       <Chat initialMessages={initialMessages} />
-    </main>
+    </div>
   );
 }

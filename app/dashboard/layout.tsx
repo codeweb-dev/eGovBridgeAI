@@ -1,25 +1,47 @@
-import Link from "next/link";
-import { LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { logout } from "./actions";
-import { NavLinks } from "./nav-links";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { ModeToggle } from "@/components/mode-toggle";
+import { Separator } from "@/components/ui/separator";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { AppSidebar, PageTitle } from "./app-sidebar";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const userId = await getSession();
+  if (!userId) redirect("/login");
+
+  const { data: user } = await getSupabaseAdmin()
+    .from("users")
+    .select("phone, full_name")
+    .eq("id", userId)
+    .single();
+
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <header className="flex items-center gap-4 border-b px-4 py-3">
-        <Link href="/dashboard" className="shrink-0 text-lg font-bold tracking-tight">
-          eGov<span className="text-primary">Bridge</span>AI
-        </Link>
-        <NavLinks />
-        <form action={logout} className="ml-auto shrink-0">
-          <Button variant="ghost" size="sm" type="submit">
-            <LogOut />
-            <span className="hidden sm:inline">Logout</span>
-          </Button>
-        </form>
-      </header>
-      {children}
-    </div>
+    <SidebarProvider>
+      <AppSidebar
+        name={user?.full_name || user?.phone || "Account"}
+        phone={user?.phone ?? ""}
+        initials={(user?.full_name || user?.phone || "").slice(0, 3).toUpperCase()}
+      />
+      <SidebarInset className="min-h-svh">
+        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-md">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 h-4!" />
+          <PageTitle />
+          <div className="ml-auto">
+            <ModeToggle />
+          </div>
+        </header>
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

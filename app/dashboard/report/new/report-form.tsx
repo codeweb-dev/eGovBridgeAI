@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,13 +15,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getReportTypes,
   getRegions,
@@ -145,17 +140,19 @@ export function ReportForm({
   }
 
   if (loading) {
-    return <p className="text-muted-foreground">Loading form…</p>;
+    return (
+      <div className="space-y-4">
+        {[220, 300, 260].map((h) => (
+          <Skeleton key={h} className="w-full rounded-2xl" style={{ height: h }} />
+        ))}
+      </div>
+    );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Submit a Report</CardTitle>
-        <CardDescription>File a report with the relevant government agency.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Section step="01" title="About you" hint="Used so the agency can reach you about this report.">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="firstName">First name</Label>
@@ -185,7 +182,11 @@ export function ReportForm({
               </Select>
             </div>
           </div>
+        </div>
+      </Section>
 
+      <Section step="02" title="Your report" hint="Be specific — it helps the agency route and act on it faster.">
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label>Report Category</Label>
             <Select value={reportType} onValueChange={(v) => setReportType(v ?? "")}>
@@ -211,7 +212,11 @@ export function ReportForm({
             <Label htmlFor="message">Description</Label>
             <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} required rows={5} />
           </div>
+        </div>
+      </Section>
 
+      <Section step="03" title="Where it happened" hint="Pick down to the barangay so it reaches the right office.">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Region</Label>
@@ -278,11 +283,48 @@ export function ReportForm({
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Submitting…" : "Submit Report"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+      </Section>
+
+      <div className="flex flex-col gap-3 rounded-2xl border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          You&apos;ll get a reference number you can track under My Reports.
+        </p>
+        <Button type="submit" disabled={submitting} className="group shrink-0">
+          {submitting ? "Submitting…" : "Submit Report"}
+          {!submitting && (
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** One step of the form: mono step number, title, and the fields it owns. */
+function Section({
+  step,
+  title,
+  hint,
+  children,
+}: {
+  step: string;
+  title: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border bg-card p-6">
+      <div className="mb-5 flex items-baseline gap-3">
+        <span className="font-mono text-[11px] tracking-[0.22em] text-primary uppercase">
+          {step}
+        </span>
+        <div>
+          <h2 className="font-semibold tracking-tight">{title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{hint}</p>
+        </div>
+      </div>
+      {children}
+    </section>
   );
 }
