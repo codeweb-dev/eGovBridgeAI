@@ -26,3 +26,16 @@ export async function sendMessage(prompt: string): Promise<ChatEntry> {
   // The answer is worth showing even if we failed to record it.
   return data ?? { id: `local-${Date.now()}`, prompt, response, created_at: new Date().toISOString() };
 }
+
+export async function deleteChat(id: string) {
+  const userId = await getSession();
+  if (!userId) throw new Error("Not authenticated");
+
+  const { error } = await getSupabaseAdmin()
+    .from("ai_history")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw new Error("Failed to delete chat.");
+}

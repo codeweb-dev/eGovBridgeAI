@@ -11,6 +11,7 @@ import {
   Copy,
   MessageSquarePlus,
   PanelLeft,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -34,7 +35,18 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
-import { sendMessage, type ChatEntry } from "./actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { deleteChat, sendMessage, type ChatEntry } from "./actions";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -102,7 +114,10 @@ export function Chat({
 
   useEffect(() => {
     if (!sending) return;
-    const id = setInterval(() => setPhase((p) => (p + 1) % THINKING.length), 2600);
+    const id = setInterval(
+      () => setPhase((p) => (p + 1) % THINKING.length),
+      2600,
+    );
     return () => clearInterval(id);
   }, [sending]);
 
@@ -114,11 +129,16 @@ export function Chat({
     setSending(true);
     try {
       const entry = await sendMessage(question);
-      setMessages((prev) => [...prev, { role: "assistant", content: entry.response }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: entry.response },
+      ]);
       setChats((prev) => [entry, ...prev]);
       setActiveId(entry.id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to get a response.");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to get a response.",
+      );
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setSending(false);
@@ -137,6 +157,20 @@ export function Chat({
     setActiveId(null);
     setMessages([]);
     inputRef.current?.focus();
+  }
+
+  async function removeChat(chat: ChatEntry) {
+    const before = chats;
+    setChats(before.filter((c) => c.id !== chat.id));
+    if (activeId === chat.id) newChat();
+    try {
+      await deleteChat(chat.id);
+    } catch (err) {
+      setChats(before);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete chat.",
+      );
+    }
   }
 
   return (
@@ -178,19 +212,27 @@ export function Chat({
                     {label}
                   </p>
                   {group.map((chat) => (
-                    <button
+                    <div
                       key={chat.id}
-                      type="button"
-                      onClick={() => openChat(chat)}
                       className={cn(
-                        "block w-full truncate rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-                        activeId === chat.id
-                          ? "bg-accent font-medium text-accent-foreground"
-                          : "text-muted-foreground",
+                        "group/chat relative rounded-md transition-colors hover:bg-accent",
+                        activeId === chat.id && "bg-accent",
                       )}
                     >
-                      {chat.prompt}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => openChat(chat)}
+                        className={cn(
+                          "block w-full truncate rounded-md py-1.5 pr-8 pl-2 text-left text-sm group-hover/chat:text-accent-foreground",
+                          activeId === chat.id
+                            ? "font-medium text-accent-foreground"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {chat.prompt}
+                      </button>
+                      <DeleteChatButton chat={chat} onConfirm={removeChat} />
+                    </div>
                   ))}
                 </div>
               ))
@@ -224,7 +266,10 @@ export function Chat({
               <MessageSquarePlus className="size-4" />
             </Button>
             <ModeToggle />
-            <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <Link
+              href="/dashboard"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
               <ArrowLeft className="size-4" />
               <span className="hidden sm:inline">Back to dashboard</span>
             </Link>
@@ -282,7 +327,9 @@ export function Chat({
                           </MessageAvatar>
                         )}
                         <MessageContent>
-                          <Bubble variant={m.role === "user" ? "default" : "ghost"}>
+                          <Bubble
+                            variant={m.role === "user" ? "default" : "ghost"}
+                          >
                             <BubbleContent className="whitespace-pre-wrap">
                               {m.content}
                             </BubbleContent>
@@ -355,6 +402,55 @@ export function Chat({
         </div>
       </div>
     </div>
+  );
+}
+
+function DeleteChatButton({
+  chat,
+  onConfirm,
+}: {
+  chat: ChatEntry;
+  onConfirm: (chat: ChatEntry) => void;
+}) {
+  // AlertDialogAction is a plain Button, so closing is on us.
+  const [open, setOpen] = useState(false);
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete chat: ${chat.prompt}`}
+            className="absolute top-1/2 right-1 size-6 -translate-y-1/2 text-muted-foreground opacity-0 transition-opacity group-hover/chat:opacity-100 focus-visible:opacity-100 hover:text-destructive"
+          />
+        }
+      >
+        <Trash2 className="size-3.5" />
+      </AlertDialogTrigger>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+          <AlertDialogDescription>
+            “{chat.prompt}” and its answer will be permanently removed from your
+            history. This can&apos;t be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => {
+              setOpen(false);
+              onConfirm(chat);
+            }}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
