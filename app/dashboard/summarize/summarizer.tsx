@@ -11,6 +11,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { Markdown } from "@/components/markdown";
 import { summarizeDocument } from "./actions";
 
 export function Summarizer() {
@@ -56,7 +57,7 @@ export function Summarizer() {
             <CardTitle>Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="whitespace-pre-wrap text-sm">{summary}</p>
+            <Markdown className="max-w-[37em]">{summary}</Markdown>
           </CardContent>
         </Card>
       )}

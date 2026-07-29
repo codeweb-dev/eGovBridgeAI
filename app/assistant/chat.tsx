@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -9,11 +10,16 @@ import {
   Bot,
   Check,
   Copy,
+  MapPin,
   MessageSquarePlus,
+  Mic,
   PanelLeft,
+  Square,
   Trash2,
+  Volume2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Markdown } from "@/components/markdown";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,7 +52,35 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteChat, sendMessage, type ChatEntry } from "./actions";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import type { LatLng } from "@/components/location-map";
+import {
+  deleteChat,
+  describeLocation,
+  sendMessage,
+  type ChatEntry,
+} from "./actions";
+
+// Leaflet touches `window` on import, so it can only load in the browser.
+const LocationMap = dynamic(() => import("@/components/location-map"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-80 items-center justify-center rounded-xl border">
+      <Spinner />
+    </div>
+  ),
+});
+import { Logo } from "@/components/logo";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -58,6 +92,8 @@ const SUGGESTIONS = [
   "What documents do I need for a barangay clearance?",
   "How do I get a digital TIN ID?",
   "Where do I report a broken streetlight?",
+  "What are the requirements for a business permit?",
+  "How do I apply for a driver's license?",
 ];
 
 // The API answers in one shot, so these are honest pacing labels, not real steps.
@@ -123,6 +159,7 @@ export function Chat({
 
   async function ask(question: string) {
     if (!question || sending) return;
+    stopSpeaking();
     setMessages((prev) => [...prev, { role: "user", content: question }]);
     setPrompt("");
     setPhase(0);
@@ -145,7 +182,13 @@ export function Chat({
     }
   }
 
+  function appendToPrompt(text: string) {
+    setPrompt((p) => (p ? `${p.trimEnd()} ${text}` : text));
+    inputRef.current?.focus();
+  }
+
   function openChat(chat: ChatEntry) {
+    stopSpeaking();
     setActiveId(chat.id);
     setMessages([
       { role: "user", content: chat.prompt },
@@ -154,6 +197,7 @@ export function Chat({
   }
 
   function newChat() {
+    stopSpeaking();
     setActiveId(null);
     setMessages([]);
     inputRef.current?.focus();
@@ -177,20 +221,18 @@ export function Chat({
     <div className="flex h-svh min-h-0 w-full">
       {showHistory && (
         <aside className="hidden w-64 shrink-0 flex-col border-r bg-sidebar/40 md:flex">
-          <div className="flex items-center gap-2 border-b px-3 py-2.5">
-            <span
-              aria-hidden
-              className="flex size-7 shrink-0 flex-col justify-center gap-[2px] rounded-lg bg-primary px-1.5"
-            >
-              <span className="h-[2px] rounded-full bg-primary-foreground" />
-              <span className="h-[2px] rounded-full bg-brand-gold" />
-              <span className="h-[2px] w-2/3 rounded-full bg-brand-red" />
-            </span>
-            <span className="truncate text-sm font-bold tracking-tight">
-              eGov<span className="text-primary">Bridge</span>AI
-            </span>
+          <div className="flex items-center gap-2 border-b px-3 py-4">
+            <Logo />
           </div>
-          <div className="p-3">
+          <div className="p-3 flex flex-col gap-2">
+            <Link
+              href="/dashboard"
+              className={`${buttonVariants({ variant: "default" })} w-full justify-start`}
+            >
+              <ArrowLeft className="size-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Link>
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -266,26 +308,14 @@ export function Chat({
               <MessageSquarePlus className="size-4" />
             </Button>
             <ModeToggle />
-            <Link
-              href="/dashboard"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              <ArrowLeft className="size-4" />
-              <span className="hidden sm:inline">Back to dashboard</span>
-            </Link>
           </div>
         </header>
 
         {messages.length === 0 ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
-            <span
-              aria-hidden
-              className="flex size-11 flex-col justify-center gap-[3px] rounded-xl bg-primary px-2.5"
-            >
-              <span className="h-[3px] rounded-full bg-primary-foreground" />
-              <span className="h-[3px] rounded-full bg-brand-gold" />
-              <span className="h-[3px] w-2/3 rounded-full bg-brand-red" />
-            </span>
+            <div className="mb-6">
+              <Logo />
+            </div>
             <h1 className="mt-6 text-3xl font-bold tracking-tighter">
               {greeting()}, <span className="text-primary">{firstName}</span>
             </h1>
@@ -312,7 +342,8 @@ export function Chat({
                 <MessageScrollerContent className="mx-auto w-full max-w-3xl px-6 py-6">
                   {messages.map((m, i) => (
                     <MessageScrollerItem
-                      key={i}
+                      // Keyed by chat so switching remounts the read-aloud buttons.
+                      key={`${activeId}-${i}`}
                       messageId={String(i)}
                       scrollAnchor={m.role === "user"}
                     >
@@ -330,13 +361,22 @@ export function Chat({
                           <Bubble
                             variant={m.role === "user" ? "default" : "ghost"}
                           >
-                            <BubbleContent className="whitespace-pre-wrap">
-                              {m.content}
+                            <BubbleContent>
+                              {m.role === "user" ? (
+                                <span className="whitespace-pre-wrap">
+                                  {m.content}
+                                </span>
+                              ) : (
+                                <Markdown className="max-w-[37em]">
+                                  {m.content}
+                                </Markdown>
+                              )}
                             </BubbleContent>
                           </Bubble>
                           {m.role === "assistant" && (
                             <MessageFooter>
                               <CopyButton text={m.content} />
+                              <SpeakButton text={m.content} />
                             </MessageFooter>
                           )}
                         </MessageContent>
@@ -389,19 +429,258 @@ export function Chat({
               <span className="text-[11px] text-muted-foreground">
                 Enter to send · Shift + Enter for a new line
               </span>
-              <Button
-                type="submit"
-                size="icon-sm"
-                disabled={sending || !prompt.trim()}
-                aria-label="Send"
-              >
-                {sending ? <Spinner /> : <ArrowUp className="size-4" />}
-              </Button>
+              <div className="flex items-center gap-1">
+                <LocationButton disabled={sending} onPick={appendToPrompt} />
+                <MicButton disabled={sending} onTranscript={appendToPrompt} />
+                <Button
+                  type="submit"
+                  size="icon-sm"
+                  disabled={sending || !prompt.trim()}
+                  aria-label="Send"
+                >
+                  {sending ? <Spinner /> : <ArrowUp className="size-4" />}
+                </Button>
+              </div>
             </div>
           </form>
+
+          {/* The empty state already shows these as cards — don't repeat them there. */}
+          <div className="mx-auto mt-2 flex w-full max-w-3xl flex-wrap gap-1.5 empty:mt-0">
+            {(messages.length === 0 ? [] : SUGGESTIONS).map((s) => (
+              <Badge
+                key={s}
+                variant="outline"
+                className="h-auto cursor-pointer py-1 whitespace-normal hover:bg-muted hover:text-foreground"
+                render={
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => ask(s)}
+                  />
+                }
+              >
+                {s}
+              </Badge>
+            ))}
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function LocationButton({
+  onPick,
+  disabled,
+}: {
+  onPick: (text: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pin, setPin] = useState<LatLng | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  async function confirm() {
+    if (!pin) return;
+    setResolving(true);
+    try {
+      onPick(`(near ${await describeLocation(pin[0], pin[1])})`);
+      setOpen(false);
+      setPin(null);
+    } finally {
+      setResolving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={disabled}
+            aria-label="Add a location to your question"
+          />
+        }
+      >
+        <MapPin className="size-4" />
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Pin a location</DialogTitle>
+          <DialogDescription>
+            Click the map to drop a pin. The address gets added to your
+            question.
+          </DialogDescription>
+        </DialogHeader>
+        {/* Leaflet needs `window`, and only mount it once the dialog is open. */}
+        {open && (
+          <LocationMap
+            value={pin}
+            onChange={setPin}
+            className="z-0 h-80 min-h-0 rounded-xl border"
+          />
+        )}
+        <DialogFooter>
+          <p className="mr-auto self-center font-mono text-xs text-muted-foreground">
+            {pin ? `${pin[0].toFixed(5)}, ${pin[1].toFixed(5)}` : "No pin yet"}
+          </p>
+          <DialogClose render={<Button variant="outline" />}>
+            Cancel
+          </DialogClose>
+          <Button onClick={confirm} disabled={!pin || resolving}>
+            {resolving ? <Spinner /> : null}
+            Use this location
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Web Speech API, Chrome/Safari/Edge only — webkit-prefixed everywhere but Chrome. */
+function getSpeechRecognition() {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  onresult:
+    | ((e: {
+        resultIndex: number;
+        results: ArrayLike<
+          ArrayLike<{ transcript: string }> & { isFinal: boolean }
+        >;
+      }) => void)
+    | null;
+  onerror: ((e: { error: string }) => void) | null;
+  onend: (() => void) | null;
+}
+
+function MicButton({
+  onTranscript,
+  disabled,
+}: {
+  onTranscript: (text: string) => void;
+  disabled?: boolean;
+}) {
+  const [supported, setSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recRef = useRef<SpeechRecognitionLike | null>(null);
+
+  // Feature-detect after mount so the server and client markup agree.
+  useEffect(() => setSupported(getSpeechRecognition() !== null), []);
+  useEffect(() => () => recRef.current?.stop(), []);
+
+  function toggle() {
+    if (listening) {
+      recRef.current?.stop();
+      return;
+    }
+    const Ctor = getSpeechRecognition();
+    if (!Ctor) return;
+
+    const rec = new Ctor();
+    recRef.current = rec;
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.lang = navigator.language || "en-US";
+    rec.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal)
+          onTranscript(e.results[i][0].transcript.trim());
+      }
+    };
+    rec.onerror = (e) => {
+      setListening(false);
+      if (e.error !== "aborted" && e.error !== "no-speech") {
+        toast.error(
+          e.error === "not-allowed"
+            ? "Microphone access was blocked."
+            : "Dictation stopped unexpectedly.",
+        );
+      }
+    };
+    rec.onend = () => setListening(false);
+    rec.start();
+    setListening(true);
+  }
+
+  if (!supported) return null;
+
+  return (
+    <Button
+      type="button"
+      variant={listening ? "destructive" : "ghost"}
+      size="icon-sm"
+      disabled={disabled}
+      onClick={toggle}
+      aria-label={listening ? "Stop dictation" : "Dictate your question"}
+      aria-pressed={listening}
+    >
+      <Mic className={cn("size-4", listening && "animate-pulse")} />
+    </Button>
+  );
+}
+
+function stopSpeaking() {
+  if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+}
+
+/** Speech synthesis reads plain text, so flatten the markdown first. */
+function speakable(md: string) {
+  return md
+    .replace(/```[\s\S]*?```/g, " code block ")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`>#|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function SpeakButton({ text }: { text: string }) {
+  const [speaking, setSpeaking] = useState(false);
+
+  useEffect(() => stopSpeaking, []);
+
+  function toggle() {
+    if (!window.speechSynthesis) return;
+    stopSpeaking();
+    if (speaking) {
+      setSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(speakable(text));
+    utterance.lang = navigator.language || "en-US";
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      onClick={toggle}
+      aria-label={speaking ? "Stop reading" : "Read answer aloud"}
+    >
+      {speaking ? (
+        <Square className="size-3.5" />
+      ) : (
+        <Volume2 className="size-3.5" />
+      )}
+    </Button>
   );
 }
 
