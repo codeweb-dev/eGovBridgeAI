@@ -3,6 +3,7 @@
 import { askAssistant } from "@/lib/egov-ai";
 import { getSession } from "@/lib/session";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { Report } from "@/app/dashboard/reports/reports-table";
 
 export interface ChatEntry {
   id: string;
@@ -41,6 +42,22 @@ export async function describeLocation(lat: number, lng: number): Promise<string
   } catch {
     return coords;
   }
+}
+
+/** Same columns the My Reports page loads, so the chat can render the same rows. */
+export async function listMyReports(): Promise<Report[]> {
+  const userId = await getSession();
+  if (!userId) throw new Error("Not authenticated");
+
+  const { data } = await getSupabaseAdmin()
+    .from("reports")
+    .select(
+      "id, report_api_id, category, title, description, status, created_at, latitude, longitude",
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  return data ?? [];
 }
 
 export async function deleteChat(id: string) {

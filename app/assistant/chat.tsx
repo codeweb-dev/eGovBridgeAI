@@ -8,18 +8,23 @@ import {
   ArrowLeft,
   ArrowUp,
   Bot,
-  Check,
-  Copy,
+  ClipboardList,
+  ListChecks,
+  type LucideIcon,
   MapPin,
   MessageSquarePlus,
   Mic,
   PanelLeft,
-  Square,
+  Search,
   Trash2,
-  Volume2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Markdown } from "@/components/markdown";
+import {
+  CopyButton,
+  SpeakButton,
+  stopSpeaking,
+} from "@/components/message-actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,7 +57,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogClose,
@@ -64,6 +68,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import type { LatLng } from "@/components/location-map";
+import { ReportTool } from "./report-tool";
+import { ReportsTool, type ReportsMode } from "./reports-tool";
 import {
   deleteChat,
   describeLocation,
@@ -82,18 +88,58 @@ const LocationMap = dynamic(() => import("@/components/location-map"), {
 });
 import { Logo } from "@/components/logo";
 
+type Tool = "report" | ReportsMode;
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  /** Renders that tool's card under the message instead of just text. */
+  tool?: Tool;
 }
+
+/** Handled by an inline tool, not sent to the model. */
+const TOOLS: Record<
+  string,
+  { tool: Tool; reply: string; tag: string; icon: LucideIcon }
+> = {
+  "How do I file a report?": {
+    tool: "report",
+    tag: "Form",
+    icon: ClipboardList,
+    reply:
+      "I can file it for you right here — three quick steps and it goes straight to the right agency.",
+  },
+  "List all my reports": {
+    tool: "list",
+    tag: "List",
+    icon: ListChecks,
+    reply: "Here's everything you've filed, newest first.",
+  },
+  "Search for a report": {
+    tool: "search",
+    tag: "Search",
+    icon: Search,
+    reply:
+      "Search by reference number, title, category, or status — I'll filter as you type.",
+  },
+  "Show all my reports on the map": {
+    tool: "map",
+    tag: "Map",
+    icon: MapPin,
+    reply:
+      "Here's where everything you've filed landed. Tap a pin for the details.",
+  },
+};
+
+const REPORT_PROMPT = "How do I file a report?";
 
 const SUGGESTIONS = [
   "How do I renew my passport?",
   "What documents do I need for a barangay clearance?",
-  "How do I get a digital TIN ID?",
-  "Where do I report a broken streetlight?",
-  "What are the requirements for a business permit?",
-  "How do I apply for a driver's license?",
+  REPORT_PROMPT,
+  "List all my reports",
+  "Search for a report",
+  "Show all my reports on the map",
 ];
 
 // The API answers in one shot, so these are honest pacing labels, not real steps.
@@ -135,9 +181,13 @@ function groupByDay(chats: ChatEntry[]) {
 export function Chat({
   history,
   firstName,
+  lastName,
+  email,
 }: {
   history: ChatEntry[];
   firstName: string;
+  lastName: string;
+  email: string;
 }) {
   const [chats, setChats] = useState(history);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -160,6 +210,18 @@ export function Chat({
   async function ask(question: string) {
     if (!question || sending) return;
     stopSpeaking();
+    // Every entry point routes through here, so the tool intercept lives here too.
+    const match = TOOLS[question];
+    if (match) {
+      setPrompt("");
+      setActiveId(null);
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: question },
+        { role: "assistant", content: match.reply, tool: match.tool },
+      ]);
+      return;
+    }
     setMessages((prev) => [...prev, { role: "user", content: question }]);
     setPrompt("");
     setPhase(0);
@@ -323,16 +385,31 @@ export function Chat({
               Ask about permits, IDs, agencies, or anything government-related.
             </p>
             <div className="mt-8 grid w-full max-w-lg gap-2 sm:grid-cols-2">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => ask(s)}
-                  className="rounded-xl border bg-card px-4 py-3 text-left text-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5"
-                >
-                  {s}
-                </button>
-              ))}
+              {SUGGESTIONS.map((s) => {
+                // Tool prompts open a card instead of answering — say so up front.
+                const tool = TOOLS[s];
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => ask(s)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl border bg-card px-4 py-3 text-left text-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5",
+                      tool && "border-primary/30 bg-primary/5",
+                    )}
+                  >
+                    {tool && (
+                      <tool.icon className="size-4 shrink-0 text-primary" />
+                    )}
+                    <span className="min-w-0 flex-1">{s}</span>
+                    {tool && (
+                      <span className="shrink-0 font-mono text-[10px] tracking-[0.18em] text-primary uppercase">
+                        {tool.tag}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : (
@@ -373,7 +450,20 @@ export function Chat({
                               )}
                             </BubbleContent>
                           </Bubble>
-                          {m.role === "assistant" && (
+                          {m.tool === "report" && (
+                            <ReportTool
+                              firstName={firstName}
+                              lastName={lastName}
+                              email={email}
+                            />
+                          )}
+                          {m.tool && m.tool !== "report" && (
+                            <ReportsTool
+                              mode={m.tool}
+                              onFileReport={() => ask(REPORT_PROMPT)}
+                            />
+                          )}
+                          {m.role === "assistant" && !m.tool && (
                             <MessageFooter>
                               <CopyButton text={m.content} />
                               <SpeakButton text={m.content} />
@@ -443,26 +533,6 @@ export function Chat({
               </div>
             </div>
           </form>
-
-          {/* The empty state already shows these as cards — don't repeat them there. */}
-          <div className="mx-auto mt-2 flex w-full max-w-3xl flex-wrap gap-1.5 empty:mt-0">
-            {(messages.length === 0 ? [] : SUGGESTIONS).map((s) => (
-              <Badge
-                key={s}
-                variant="outline"
-                className="h-auto cursor-pointer py-1 whitespace-normal hover:bg-muted hover:text-foreground"
-                render={
-                  <button
-                    type="button"
-                    disabled={sending}
-                    onClick={() => ask(s)}
-                  />
-                }
-              >
-                {s}
-              </Badge>
-            ))}
-          </div>
         </div>
       </div>
     </div>
@@ -634,56 +704,6 @@ function MicButton({
   );
 }
 
-function stopSpeaking() {
-  if (typeof window !== "undefined") window.speechSynthesis?.cancel();
-}
-
-/** Speech synthesis reads plain text, so flatten the markdown first. */
-function speakable(md: string) {
-  return md
-    .replace(/```[\s\S]*?```/g, " code block ")
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/[*_`>#|]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function SpeakButton({ text }: { text: string }) {
-  const [speaking, setSpeaking] = useState(false);
-
-  useEffect(() => stopSpeaking, []);
-
-  function toggle() {
-    if (!window.speechSynthesis) return;
-    stopSpeaking();
-    if (speaking) {
-      setSpeaking(false);
-      return;
-    }
-    const utterance = new SpeechSynthesisUtterance(speakable(text));
-    utterance.lang = navigator.language || "en-US";
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-    window.speechSynthesis.speak(utterance);
-    setSpeaking(true);
-  }
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={toggle}
-      aria-label={speaking ? "Stop reading" : "Read answer aloud"}
-    >
-      {speaking ? (
-        <Square className="size-3.5" />
-      ) : (
-        <Volume2 className="size-3.5" />
-      )}
-    </Button>
-  );
-}
-
 function DeleteChatButton({
   chat,
   onConfirm,
@@ -730,24 +750,5 @@ function DeleteChatButton({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  );
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      aria-label="Copy answer"
-      onClick={() => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      }}
-    >
-      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-    </Button>
   );
 }

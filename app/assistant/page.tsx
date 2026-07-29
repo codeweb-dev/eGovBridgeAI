@@ -15,13 +15,21 @@ export default async function AssistantPage() {
       .eq("user_id", userId)
       .eq("kind", "assistant")
       .order("created_at", { ascending: false }),
-    supabase.from("users").select("full_name").eq("id", userId).single(),
+    supabase
+      .from("users")
+      .select("full_name, email")
+      .eq("id", userId)
+      .single(),
   ]);
+
+  const [firstName = "", ...rest] = (user?.full_name ?? "").split(" ");
 
   return (
     <Chat
       history={history ?? []}
-      firstName={user?.full_name?.split(" ")[0] ?? "there"}
+      firstName={firstName || "there"}
+      lastName={rest.join(" ")}
+      email={user?.email ?? ""}
     />
   );
 }

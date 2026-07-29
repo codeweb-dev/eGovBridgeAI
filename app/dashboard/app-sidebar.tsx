@@ -26,14 +26,24 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { logout } from "./actions";
+import { Logo } from "@/components/logo";
 
 const links = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   // ponytail: not in the nav — you reach it from the My Reports button
-  { href: "/dashboard/report/new", label: "Submit Report", icon: FileText, hidden: true },
+  {
+    href: "/dashboard/report/new",
+    label: "Submit Report",
+    icon: FileText,
+    hidden: true,
+  },
   { href: "/dashboard/reports", label: "My Reports", icon: ClipboardList },
   { href: "/assistant", label: "AI Assistant", icon: Bot },
-  { href: "/dashboard/summarize", label: "Document Summarizer", icon: Sparkles },
+  {
+    href: "/dashboard/summarize",
+    label: "Document Summarizer",
+    icon: Sparkles,
+  },
 ];
 
 /** Header label for the current section, so the top bar isn't just a trigger. */
@@ -73,14 +83,7 @@ export function AppSidebar({
                 <span className="h-[3px] rounded-full bg-brand-gold" />
                 <span className="h-[3px] w-2/3 rounded-full bg-brand-red" />
               </span>
-              <span className="grid flex-1 text-left leading-tight">
-                <span className="truncate font-bold tracking-tight">
-                  eGov<span className="text-primary">Bridge</span>AI
-                </span>
-                <span className="truncate font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                  Dashboard
-                </span>
-              </span>
+              <Logo />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
