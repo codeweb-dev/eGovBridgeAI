@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ShieldCheck, Bot, ClipboardCheck, ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Eyebrow } from "@/components/landing/eyebrow";
+import { Reveal } from "@/components/landing/reveal";
 
 const trustPoints = [
   { icon: ShieldCheck, label: "OTP-verified sign-in" },
@@ -17,49 +18,64 @@ const timeline = [
 
 export function Hero() {
   return (
-    <section className="flex min-h-[calc(100dvh-65px)] flex-col justify-center overflow-hidden px-6 py-20">
+    // ponytail: 65px = header height (h-14 logo + py-1 + border)
+    <section className="relative flex min-h-[calc(100dvh-65px)] flex-col justify-center overflow-hidden px-6 py-16">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle,var(--color-border)_1px,transparent_1px)] bg-size-[26px_26px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_40%,black,transparent)]"
+      />
       <div className="mx-auto grid w-full max-w-6xl items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
         <div>
-          <Eyebrow>Your bridge to government services</Eyebrow>
-          <h1 className="mt-6 text-4xl font-bold tracking-tighter text-balance sm:text-5xl xl:text-6xl">
-            All government services.
-            <br />
-            <span className="text-primary">One dashboard.</span>
-          </h1>
-          <p className="mt-6 max-w-md text-lg text-pretty text-muted-foreground">
-            File reports, ask questions, and get instant AI-powered help with
-            government services, verified securely with your mobile number.
-          </p>
-          <div className="mt-9 flex flex-wrap items-center gap-3">
-            <Link
-              href="/login"
-              className={buttonVariants({ size: "lg", className: "group" })}
-            >
-              Get Started
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-            <a
-              href="#how-it-works"
-              className={buttonVariants({ variant: "outline", size: "lg" })}
-            >
-              See how it works
-            </a>
-          </div>
-          <div className="mt-12 flex flex-wrap gap-x-8 gap-y-3 border-t pt-6">
-            {trustPoints.map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="flex items-center gap-2 text-sm font-medium"
+          <Reveal>
+            <Eyebrow>Your bridge to government services</Eyebrow>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <h1 className="mt-6 text-4xl font-bold tracking-tighter text-balance sm:text-5xl xl:text-6xl">
+              All government services.
+              <br />
+              <span className="text-primary">One dashboard.</span>
+            </h1>
+          </Reveal>
+          <Reveal delay={0.16}>
+            <p className="mt-6 max-w-md text-lg text-pretty text-muted-foreground">
+              File reports, ask questions, and get instant AI-powered help with
+              government services, verified securely with your mobile number.
+            </p>
+          </Reveal>
+          <Reveal delay={0.24}>
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <Link
+                href="/login"
+                className={buttonVariants({ size: "lg", className: "group" })}
               >
-                <Icon className="size-4 text-primary" />
-                {label}
-              </div>
-            ))}
-          </div>
+                Get Started
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <a
+                href="#how-it-works"
+                className={buttonVariants({ variant: "outline", size: "lg" })}
+              >
+                See how it works
+              </a>
+            </div>
+          </Reveal>
+          <Reveal delay={0.32}>
+            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 border-t pt-6">
+              {trustPoints.map(({ icon: Icon, label }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-2 text-sm font-medium"
+                >
+                  <Icon className="size-4 text-primary" />
+                  {label}
+                </div>
+              ))}
+            </div>
+          </Reveal>
         </div>
 
         {/* The thing this product actually gives you: a filed report you can follow. */}
-        <div className="relative mx-auto w-full max-w-md">
+        <Reveal delay={0.18} className="relative mx-auto w-full max-w-md">
           <div className="overflow-hidden rounded-3xl border bg-card shadow-2xl shadow-primary/10">
             <div aria-hidden className="flex h-1.5">
               <span className="flex-1 bg-primary" />
@@ -75,7 +91,11 @@ export function Hero() {
                   EGB-2026-0417
                 </p>
               </div>
-              <span className="rounded-full bg-brand-gold/15 px-3 py-1 text-xs font-semibold text-brand-red">
+              <span className="flex items-center gap-1.5 rounded-full bg-brand-gold/15 px-3 py-1 text-xs font-semibold text-brand-red dark:text-brand-gold">
+                <span className="relative flex size-1.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-red opacity-75 dark:bg-brand-gold" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-brand-red dark:bg-brand-gold" />
+                </span>
                 In review
               </span>
             </div>
@@ -123,10 +143,10 @@ export function Hero() {
             </div>
           </div>
           <div
-            className="pointer-events-none absolute -inset-8 -z-10 rounded-[3rem] bg-primary/10 blur-3xl"
+            className="pointer-events-none absolute -inset-8 -z-10 rounded-[3rem] bg-primary/15 blur-3xl"
             aria-hidden
           />
-        </div>
+        </Reveal>
       </div>
     </section>
   );

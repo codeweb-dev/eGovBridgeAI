@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Reveal } from "@/components/landing/reveal";
 
 export function Cta() {
   return (
-    <section className="px-6 py-24">
-      <div className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-3xl bg-primary px-8 py-20 text-center text-primary-foreground sm:px-16">
+    <section className="px-6 py-20">
+      <Reveal className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-3xl bg-primary px-8 py-20 text-center text-primary-foreground sm:px-16">
         <div aria-hidden className="absolute inset-x-0 top-0 flex h-1.5">
           <span className="flex-1 bg-white/70" />
           <span className="flex-1 bg-brand-gold" />
@@ -36,7 +37,7 @@ export function Cta() {
           Get Started
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
-      </div>
+      </Reveal>
     </section>
   );
 }
