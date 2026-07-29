@@ -214,7 +214,11 @@ export async function submitReport({
 
   await supabase
     .from("users")
-    .update({ full_name: `${input.first_name} ${input.last_name}`, email: input.complainant_email })
+    .update({
+      full_name: `${input.first_name} ${input.last_name}`,
+      email: input.complainant_email,
+      gender: input.gender,
+    })
     .eq("id", userId);
 
   return result;

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { logout } from "./actions";
 import { Logo } from "@/components/logo";
+import Image from "next/image";
 
 const links = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -83,7 +84,14 @@ export function AppSidebar({
                 <span className="h-[3px] rounded-full bg-brand-gold" />
                 <span className="h-[3px] w-2/3 rounded-full bg-brand-red" />
               </span>
-              <Logo />
+              <Image
+                src="/logo.png"
+                alt="eGovBridgeAI"
+                width={100}
+                height={50}
+                priority
+                className="h-auto w-auto"
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

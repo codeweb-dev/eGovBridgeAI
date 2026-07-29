@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import {
   type ColumnDef,
@@ -17,8 +18,12 @@ import {
 } from "@tanstack/react-table";
 import {
   ArrowUpDown,
+  CalendarDays,
   ClipboardList,
+  Copy,
   Eye,
+  FileText,
+  MapPin,
   Pencil,
   Plus,
   Search,
@@ -308,66 +313,118 @@ export function ReportsTable({ reports }: { reports: Report[] }) {
         open={selected !== null}
         onOpenChange={(open) => !open && setSelected(null)}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[calc(100svh-2rem)] max-w-4xl! overflow-y-auto p-0">
           {selected && (
             <>
-              <DialogHeader>
-                <DialogTitle className="tracking-tight">
-                  {selected.title}
-                </DialogTitle>
-                <DialogDescription className="font-mono text-xs tracking-wider">
-                  {selected.report_api_id}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 text-sm">
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl bg-muted/50 px-4 py-3">
-                  <div>
-                    <p className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                      Category
-                    </p>
-                    <p className="mt-1 font-medium">{selected.category}</p>
-                  </div>
-                  <div>
-                    <p className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                      Status
-                    </p>
-                    <div className="mt-1">
+              <DialogHeader className="border-b bg-linear-to-br from-primary/10 via-background to-background px-6 pt-6 pr-14 pb-5">
+                <div className="flex items-start gap-4">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+                    <FileText className="size-5" />
+                  </span>
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={selected.status} />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {selected.category}
+                      </span>
                     </div>
+                    <DialogTitle className="text-xl leading-tight font-semibold tracking-tight">
+                      {selected.title}
+                    </DialogTitle>
+                    <DialogDescription className="font-mono text-xs tracking-wider">
+                      Reference {selected.report_api_id}
+                    </DialogDescription>
                   </div>
-                  <div>
+                </div>
+              </DialogHeader>
+              <div className="flex flex-col sm:flex-row sm:items-start gap-6 p-6 text-sm">
+                <div className="min-w-0 flex-1 space-y-6">
+                  <section>
                     <p className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                      Description
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap leading-6 text-muted-foreground">
+                      {selected.description || "No description provided."}
+                    </p>
+                  </section>
+                  <section className="space-y-2">
+                    <p className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                      <MapPin className="size-3.5" />
+                      Location
+                    </p>
+                    {selected.latitude !== null &&
+                    selected.longitude !== null ? (
+                      <>
+                        <LocationMap
+                          value={[selected.latitude, selected.longitude]}
+                          className="z-0 h-52 min-h-0 rounded-2xl border"
+                        />
+                        <p className="font-mono text-xs text-muted-foreground">
+                          {selected.latitude.toFixed(5)},{" "}
+                          {selected.longitude.toFixed(5)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="rounded-2xl border border-dashed px-4 py-8 text-center text-xs text-muted-foreground">
+                        No spot was pinned when this report was filed.
+                      </p>
+                    )}
+                  </section>
+                </div>
+                <aside className="flex w-full sm:w-60 shrink-0 flex-col gap-4">
+                  <div className="rounded-2xl border p-4">
+                    <CalendarDays className="size-4 text-primary" />
+                    <p className="mt-3 font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
                       Submitted
                     </p>
                     <p className="mt-1 font-medium">
-                      {new Date(selected.created_at).toLocaleString()}
+                      {new Date(selected.created_at).toLocaleDateString(
+                        undefined,
+                        { dateStyle: "medium" },
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(selected.created_at).toLocaleTimeString(
+                        undefined,
+                        { timeStyle: "short" },
+                      )}
                     </p>
                   </div>
-                </div>
-                <p className="whitespace-pre-wrap text-muted-foreground">
-                  {selected.description}
-                </p>
-                <div className="space-y-2">
-                  <p className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                    Location
-                  </p>
-                  {selected.latitude !== null && selected.longitude !== null ? (
-                    <>
-                      <LocationMap
-                        value={[selected.latitude, selected.longitude]}
-                        className="z-0 h-48 min-h-0 rounded-xl border"
+                  <div className="rounded-2xl border bg-muted/30 p-4 text-center">
+                    <div className="mx-auto w-fit rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
+                      <QRCodeSVG
+                        value={selected.report_api_id}
+                        size={128}
+                        level="M"
+                        marginSize={1}
+                        title={`Reference ${selected.report_api_id}`}
+                        className="size-28"
                       />
-                      <p className="font-mono text-xs text-muted-foreground">
-                        {selected.latitude.toFixed(5)},{" "}
-                        {selected.longitude.toFixed(5)}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="rounded-xl border border-dashed px-4 py-6 text-center text-xs text-muted-foreground">
-                      No spot was pinned when this report was filed.
+                    </div>
+                    <p className="mt-3 font-medium">Scan reference</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Carries the case number for quick handoff.
                     </p>
-                  )}
-                </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 w-full bg-background"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(
+                            selected.report_api_id,
+                          );
+                          toast.success("Reference copied.");
+                        } catch {
+                          toast.error("Could not copy the reference.");
+                        }
+                      }}
+                    >
+                      <Copy className="size-3.5" />
+                      Copy
+                    </Button>
+                  </div>
+                </aside>
               </div>
             </>
           )}

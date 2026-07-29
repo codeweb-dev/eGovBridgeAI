@@ -10,7 +10,7 @@ export default async function NewReportPage() {
 
   const { data: user } = await getSupabaseAdmin()
     .from("users")
-    .select("full_name, email")
+    .select("full_name, email, gender")
     .eq("id", userId)
     .single();
 
@@ -31,6 +31,7 @@ export default async function NewReportPage() {
         initialFirstName={firstName}
         initialLastName={rest.join(" ")}
         initialEmail={user?.email ?? ""}
+        initialGender={user?.gender ?? ""}
       />
     </div>
   );

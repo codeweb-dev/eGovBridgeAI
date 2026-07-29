@@ -47,10 +47,12 @@ export function ReportForm({
   initialFirstName,
   initialLastName,
   initialEmail,
+  initialGender,
 }: {
   initialFirstName: string;
   initialLastName: string;
   initialEmail: string;
+  initialGender: string;
 }) {
   const router = useRouter();
 
@@ -62,7 +64,7 @@ export function ReportForm({
 
   const [firstName, setFirstName] = useState(initialFirstName);
   const [lastName, setLastName] = useState(initialLastName);
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState(initialGender);
   const [email, setEmail] = useState(initialEmail);
   const [reportType, setReportType] = useState("");
   const [subject, setSubject] = useState("");

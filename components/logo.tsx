@@ -8,6 +8,7 @@ export function Logo() {
       width={150}
       height={100}
       priority
+      className="h-auto w-auto"
     />
   );
 }
