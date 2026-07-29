@@ -106,9 +106,9 @@ export default function LoginPage() {
 
         <Link
           href="/"
-          className="relative w-fit rounded-2xl bg-white px-3 shadow-lg shadow-black/10"
+          className="relative w-fit rounded-2xl bg-white px-3 py-2 shadow-lg shadow-black/10"
         >
-          <Logo className="h-12" />
+          <Logo />
         </Link>
 
         <div className="relative">
@@ -147,7 +147,7 @@ export default function LoginPage() {
           className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle,var(--color-border)_1px,transparent_1px)] bg-size-[26px_26px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_40%,black,transparent)]"
         />
         <Link href="/" className="lg:hidden">
-          <Logo className="h-16" />
+          <Logo />
         </Link>
 
         <div className="w-full max-w-md rounded-3xl border bg-card p-8 shadow-xl shadow-primary/5">

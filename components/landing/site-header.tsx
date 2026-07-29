@@ -6,8 +6,8 @@ import { Logo } from "@/components/logo";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 py-1 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6">
-        <Logo className="h-14" />
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 py-2">
+        <Logo />
         <nav className="hidden items-center gap-7 text-xs font-medium text-muted-foreground sm:flex">
           <a href="#features" className="hover:text-foreground">
             Features

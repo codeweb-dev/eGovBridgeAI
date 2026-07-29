@@ -32,7 +32,7 @@ const links = [
   // ponytail: not in the nav — you reach it from the My Reports button
   { href: "/dashboard/report/new", label: "Submit Report", icon: FileText, hidden: true },
   { href: "/dashboard/reports", label: "My Reports", icon: ClipboardList },
-  { href: "/dashboard/assistant", label: "AI Assistant", icon: Bot },
+  { href: "/assistant", label: "AI Assistant", icon: Bot },
   { href: "/dashboard/summarize", label: "Document Summarizer", icon: Sparkles },
 ];
 

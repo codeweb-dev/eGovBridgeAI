@@ -16,7 +16,7 @@ export const dashboardCards = [
   {
     title: "AI Assistant",
     description: "Ask government-related questions and get instant answers.",
-    href: "/dashboard/assistant",
+    href: "/assistant",
     icon: Bot,
   },
   {
