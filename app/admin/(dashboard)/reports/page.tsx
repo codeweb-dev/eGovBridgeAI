@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-session";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { Eyebrow } from "@/components/landing/eyebrow";
@@ -8,6 +9,30 @@ import {
 
 export default async function AdminReportsPage() {
   await requireAdmin();
+
+  async function updateStatus(
+    id: string,
+    status: "Processing" | "Completed",
+  ) {
+    "use server";
+
+    await requireAdmin();
+    if (status !== "Processing" && status !== "Completed") {
+      throw new Error("Invalid report status.");
+    }
+
+    const { error } = await getSupabaseAdmin()
+      .from("reports")
+      .update({ status })
+      .eq("id", id)
+      .select("id")
+      .single();
+
+    if (error) throw new Error("Failed to update the report status.");
+    revalidatePath("/admin/reports");
+    revalidatePath("/admin");
+  }
+
   const { data: rows } = await getSupabaseAdmin()
     .from("reports")
     .select(
@@ -42,10 +67,15 @@ export default async function AdminReportsPage() {
           All reports
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Search every citizen report and open a complete read-only view.
+          Search every citizen report, review its details, and update its
+          status.
         </p>
       </div>
-      <ReportsTable reports={reports} readOnly />
+      <ReportsTable
+        reports={reports}
+        readOnly
+        updateStatusAction={updateStatus}
+      />
     </div>
   );
 }

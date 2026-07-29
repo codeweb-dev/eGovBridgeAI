@@ -19,10 +19,14 @@ import {
 import {
   ArrowUpDown,
   CalendarDays,
+  CircleCheck,
+  CircleDot,
   ClipboardList,
   Copy,
+  Ellipsis,
   Eye,
   FileText,
+  LoaderCircle,
   MapPin,
   Pencil,
   Plus,
@@ -60,9 +64,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { LatLng } from "@/components/location-map";
 import { StatusBadge } from "./status-badge";
 import { deleteReport, updateReport } from "./actions";
+
+type AdminReportStatus = "Processing" | "Completed";
 
 export interface Report {
   id: string;
@@ -87,8 +99,11 @@ function buildColumns(
     onView: (report: Report) => void;
     onEdit: (report: Report) => void;
     onDelete: (report: Report) => void;
+    onStatus: (report: Report, status: AdminReportStatus) => void;
   },
   readOnly = false,
+  canUpdateStatus = false,
+  updatingId: string | null = null,
 ): ColumnDef<Report>[] {
   const columns: ColumnDef<Report>[] = [
     {
@@ -151,6 +166,42 @@ function buildColumns(
           >
             <Eye className="size-3.5" />
           </Button>
+          {canUpdateStatus && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={updatingId === row.original.id}
+                    aria-label={`Change status for ${row.original.title}`}
+                  />
+                }
+              >
+                {updatingId === row.original.id ? (
+                  <LoaderCircle className="size-3.5 animate-spin" />
+                ) : (
+                  <Ellipsis className="size-3.5" />
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  disabled={row.original.status === "Processing"}
+                  onClick={() => actions.onStatus(row.original, "Processing")}
+                >
+                  <CircleDot />
+                  Mark as Processing
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={row.original.status === "Completed"}
+                  onClick={() => actions.onStatus(row.original, "Completed")}
+                >
+                  <CircleCheck />
+                  Mark as Completed
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {!readOnly && (
             <>
               <Button
@@ -193,13 +244,20 @@ function buildColumns(
 export function ReportsTable({
   reports,
   readOnly = false,
+  updateStatusAction,
 }: {
   reports: Report[];
   readOnly?: boolean;
+  updateStatusAction?: (
+    id: string,
+    status: AdminReportStatus,
+  ) => Promise<void>;
 }) {
+  const router = useRouter();
   const [selected, setSelected] = useState<Report | null>(null);
   const [editing, setEditing] = useState<Report | null>(null);
   const [deleting, setDeleting] = useState<Report | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([
     { id: "created_at", desc: true },
   ]);
@@ -212,10 +270,27 @@ export function ReportsTable({
           onView: setSelected,
           onEdit: setEditing,
           onDelete: setDeleting,
+          onStatus: async (report, status) => {
+            if (!updateStatusAction) return;
+            setUpdatingId(report.id);
+            try {
+              await updateStatusAction(report.id, status);
+              toast.success(`Report marked as ${status.toLowerCase()}.`);
+              router.refresh();
+            } catch (err) {
+              toast.error(
+                err instanceof Error ? err.message : "Failed to update status.",
+              );
+            } finally {
+              setUpdatingId(null);
+            }
+          },
         },
         readOnly,
+        Boolean(updateStatusAction),
+        updatingId,
       ),
-    [readOnly],
+    [readOnly, router, updateStatusAction, updatingId],
   );
 
   const table = useReactTable({
