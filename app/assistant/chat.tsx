@@ -68,7 +68,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import type { LatLng } from "@/components/location-map";
-import { detectAssistantToolIntent } from "@/lib/assistant-intent";
+import {
+  detectAssistantToolIntent,
+  extractReportReference,
+} from "@/lib/assistant-intent";
 import { ReportTool } from "./report-tool";
 import { ReportsTool, type ReportsMode } from "./reports-tool";
 import {
@@ -96,6 +99,7 @@ interface ChatMessage {
   content: string;
   /** Renders that tool's card under the message instead of just text. */
   tool?: Tool;
+  toolQuery?: string;
 }
 
 /** Handled by an inline tool, not sent to the model. */
@@ -213,12 +217,19 @@ export function Chat({
     const intent = detectAssistantToolIntent(question);
     const match = intent ? TOOLS[intent] : null;
     if (match) {
+      const toolQuery =
+        intent === "search" ? extractReportReference(question) : null;
       setPrompt("");
       setActiveId(null);
       setMessages((prev) => [
         ...prev,
         { role: "user", content: question },
-        { role: "assistant", content: match.reply, tool: intent! },
+        {
+          role: "assistant",
+          content: match.reply,
+          tool: intent!,
+          toolQuery: toolQuery ?? undefined,
+        },
       ]);
       return;
     }
@@ -462,6 +473,7 @@ export function Chat({
                           {m.tool && m.tool !== "report" && (
                             <ReportsTool
                               mode={m.tool}
+                              initialQuery={m.toolQuery}
                               onFileReport={() => ask(REPORT_PROMPT)}
                             />
                           )}

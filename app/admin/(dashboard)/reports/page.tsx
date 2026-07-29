@@ -56,6 +56,9 @@ export default async function AdminReportsPage() {
         person?.email ||
         person?.phone ||
         "Unknown user",
+      searchText: [person?.full_name, person?.email, person?.phone]
+        .filter(Boolean)
+        .join(" "),
     };
   });
 

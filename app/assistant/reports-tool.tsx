@@ -12,6 +12,7 @@ import {
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { reportMatchesSearch } from "@/lib/report-search";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,14 +43,16 @@ const TOOL_NAMES: Record<ReportsMode, string> = {
  */
 export function ReportsTool({
   mode,
+  initialQuery = "",
   onFileReport,
 }: {
   mode: ReportsMode;
+  initialQuery?: string;
   onFileReport?: () => void;
 }) {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,14 +63,7 @@ export function ReportsTool({
   }, []);
 
   const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return reports;
-    return reports.filter((r) =>
-      [r.title, r.category, r.status, r.report_api_id, r.description]
-        .join(" ")
-        .toLowerCase()
-        .includes(q),
-    );
+    return reports.filter((report) => reportMatchesSearch(report, query));
   }, [reports, query]);
 
   const pinned = useMemo(
@@ -130,7 +126,7 @@ export function ReportsTool({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Reference number, title, category, status…"
+              placeholder="Search any report information…"
               className="pl-9"
             />
           </div>

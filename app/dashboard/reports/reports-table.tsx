@@ -71,6 +71,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { LatLng } from "@/components/location-map";
+import { reportMatchesSearch } from "@/lib/report-search";
 import { StatusBadge } from "./status-badge";
 import { deleteReport, updateReport } from "./actions";
 
@@ -87,6 +88,7 @@ export interface Report {
   latitude: number | null;
   longitude: number | null;
   reporter?: string;
+  searchText?: string;
 }
 
 const LocationMap = dynamic(() => import("@/components/location-map"), {
@@ -299,6 +301,8 @@ export function ReportsTable({
     state: { sorting, globalFilter },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, _columnId, value) =>
+      reportMatchesSearch(row.original, String(value)),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -333,7 +337,7 @@ export function ReportsTable({
       <div className="relative max-w-sm">
         <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search reports…"
+          placeholder="Search reference, reporter, title, details…"
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="pl-9"

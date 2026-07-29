@@ -1,5 +1,11 @@
 export type AssistantToolIntent = "report" | "list" | "search" | "map";
 
+const REPORT_REFERENCE = /\b[A-Z]{2,10}-[A-Z0-9]+(?:-[A-Z0-9]+)+\b/i;
+
+export function extractReportReference(question: string) {
+  return question.match(REPORT_REFERENCE)?.[0] ?? null;
+}
+
 const SHORTCUTS: Record<string, AssistantToolIntent> = {
   report: "report",
   complaint: "report",
@@ -55,6 +61,7 @@ const RULES: [AssistantToolIntent, RegExp[]][] = [
 export function detectAssistantToolIntent(
   question: string,
 ): AssistantToolIntent | null {
+  if (extractReportReference(question)) return "search";
   const normalized = question.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   if (SHORTCUTS[normalized]) return SHORTCUTS[normalized];
   for (const [intent, patterns] of RULES) {
