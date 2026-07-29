@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   type ColumnDef,
   type SortingState,
@@ -13,9 +15,19 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ClipboardList, Plus, Search } from "lucide-react";
+import {
+  ArrowUpDown,
+  ClipboardList,
+  Eye,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -28,11 +40,24 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import type { LatLng } from "@/components/location-map";
 import { StatusBadge } from "./status-badge";
+import { deleteReport, updateReport } from "./actions";
 
 export interface Report {
   id: string;
@@ -51,58 +76,113 @@ const LocationMap = dynamic(() => import("@/components/location-map"), {
   loading: () => <Skeleton className="h-48 w-full rounded-xl" />,
 });
 
-const columns: ColumnDef<Report>[] = [
-  {
-    accessorKey: "title",
-    header: "Report",
-    cell: ({ row }) => (
-      <div className="min-w-0">
-        <p className="truncate font-medium">{row.original.title}</p>
-        <p className="truncate font-mono text-[11px] tracking-wider text-muted-foreground">
-          {row.original.report_api_id}
-        </p>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "category",
-    header: "Category",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.category}</span>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
-  },
-  {
-    accessorKey: "created_at",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="-ml-2 h-7"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Submitted
-        <ArrowUpDown className="size-3.5" />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <span className="text-muted-foreground tabular-nums">
-        {new Date(row.original.created_at).toLocaleDateString()}
-      </span>
-    ),
-  },
-];
+function buildColumns(actions: {
+  onView: (report: Report) => void;
+  onEdit: (report: Report) => void;
+  onDelete: (report: Report) => void;
+}): ColumnDef<Report>[] {
+  return [
+    {
+      accessorKey: "title",
+      header: "Report",
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <p className="truncate font-medium">{row.original.title}</p>
+          <p className="truncate font-mono text-[11px] tracking-wider text-muted-foreground">
+            {row.original.report_api_id}
+          </p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "category",
+      header: "Category",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.category}</span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      accessorKey: "created_at",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2 h-7"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Submitted
+          <ArrowUpDown className="size-3.5" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground tabular-nums">
+          {new Date(row.original.created_at).toLocaleDateString()}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      // Row clicks open the view too — these are the discoverable version.
+      cell: ({ row }) => (
+        <div
+          className="flex items-center justify-end gap-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`View ${row.original.title}`}
+            onClick={() => actions.onView(row.original)}
+          >
+            <Eye className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Edit ${row.original.title}`}
+            onClick={() => actions.onEdit(row.original)}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete ${row.original.title}`}
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() => actions.onDelete(row.original)}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+}
 
 export function ReportsTable({ reports }: { reports: Report[] }) {
   const [selected, setSelected] = useState<Report | null>(null);
+  const [editing, setEditing] = useState<Report | null>(null);
+  const [deleting, setDeleting] = useState<Report | null>(null);
   const [sorting, setSorting] = useState<SortingState>([
     { id: "created_at", desc: true },
   ]);
   const [globalFilter, setGlobalFilter] = useState("");
+
+  const columns = useMemo(
+    () =>
+      buildColumns({
+        onView: setSelected,
+        onEdit: setEditing,
+        onDelete: setDeleting,
+      }),
+    [],
+  );
 
   const table = useReactTable({
     data: reports,
@@ -175,7 +255,10 @@ export function ReportsTable({ reports }: { reports: Report[] }) {
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -264,17 +347,209 @@ export function ReportsTable({ reports }: { reports: Report[] }) {
                 <p className="whitespace-pre-wrap text-muted-foreground">
                   {selected.description}
                 </p>
-                {selected.latitude !== null && selected.longitude !== null && (
-                  <LocationMap
-                    value={[selected.latitude, selected.longitude]}
-                    className="z-0 h-48 min-h-0 rounded-xl border"
-                  />
-                )}
+                <div className="space-y-2">
+                  <p className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                    Location
+                  </p>
+                  {selected.latitude !== null && selected.longitude !== null ? (
+                    <>
+                      <LocationMap
+                        value={[selected.latitude, selected.longitude]}
+                        className="z-0 h-48 min-h-0 rounded-xl border"
+                      />
+                      <p className="font-mono text-xs text-muted-foreground">
+                        {selected.latitude.toFixed(5)},{" "}
+                        {selected.longitude.toFixed(5)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="rounded-xl border border-dashed px-4 py-6 text-center text-xs text-muted-foreground">
+                      No spot was pinned when this report was filed.
+                    </p>
+                  )}
+                </div>
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      <EditReportDialog
+        key={editing?.id ?? "none"}
+        report={editing}
+        onClose={() => setEditing(null)}
+      />
+
+      <DeleteReportDialog report={deleting} onClose={() => setDeleting(null)} />
     </>
+  );
+}
+
+function EditReportDialog({
+  report,
+  onClose,
+}: {
+  report: Report | null;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  // Keyed by report id upstream, so this mounts fresh per report.
+  const [pin, setPin] = useState<LatLng | null>(
+    report?.latitude != null && report?.longitude != null
+      ? [report.latitude, report.longitude]
+      : null,
+  );
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!report) return;
+    const data = new FormData(e.currentTarget);
+    setSaving(true);
+    try {
+      await updateReport(report.id, {
+        title: String(data.get("title") ?? ""),
+        description: String(data.get("description") ?? ""),
+        latitude: pin?.[0] ?? null,
+        longitude: pin?.[1] ?? null,
+      });
+      toast.success("Report updated.");
+      onClose();
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={report !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        {report && (
+          // Keyed so the uncontrolled inputs reset when a different row opens.
+          <form key={report.id} onSubmit={handleSubmit} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle className="tracking-tight">Edit report</DialogTitle>
+              <DialogDescription>
+                Updates your copy here. The agency keeps the case as filed under{" "}
+                <span className="font-mono">{report.report_api_id}</span>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                name="title"
+                defaultValue={report.title}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                name="description"
+                rows={4}
+                defaultValue={report.description}
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Location</Label>
+                {pin && (
+                  <button
+                    type="button"
+                    onClick={() => setPin(null)}
+                    className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    Clear pin
+                  </button>
+                )}
+              </div>
+              <LocationMap
+                value={pin}
+                onChange={setPin}
+                className="z-0 h-48 min-h-0 rounded-xl border"
+              />
+              <p className="text-xs text-muted-foreground">
+                {pin ? (
+                  <>
+                    Pinned at{" "}
+                    <span className="font-mono">
+                      {pin[0].toFixed(5)}, {pin[1].toFixed(5)}
+                    </span>
+                  </>
+                ) : (
+                  "Click the map to add a pin — it shows up on the map view."
+                )}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteReportDialog({
+  report,
+  onClose,
+}: {
+  report: Report | null;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirm() {
+    if (!report) return;
+    setDeleting(true);
+    try {
+      await deleteReport(report.id);
+      toast.success("Report removed from your list.");
+      onClose();
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <AlertDialog
+      open={report !== null}
+      onOpenChange={(open) => !open && onClose()}
+    >
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this report?</AlertDialogTitle>
+          <AlertDialogDescription>
+            “{report?.title}” disappears from your list. The agency still has
+            case <span className="font-mono">{report?.report_api_id}</span> —
+            this only removes your copy.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={deleting}
+            onClick={confirm}
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

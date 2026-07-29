@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowRight, Check, ChevronLeft, ExternalLink } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { LatLng } from "@/components/location-map";
 import { Reasoning, ToolHeader, type ReasoningStep } from "./tool-card";
 import {
   getBarangays,
@@ -24,8 +26,15 @@ import {
   getProvinces,
   getRegions,
   getReportTypes,
+  resolveLocation,
   submitReport,
 } from "@/app/dashboard/report/new/actions";
+
+// Leaflet touches `window` on import, so the map can only load in the browser.
+const LocationMap = dynamic(() => import("@/components/location-map"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-56 w-full rounded-xl" />,
+});
 
 interface Option {
   id: string;
@@ -39,10 +48,9 @@ const toItems = (options: Option[]) =>
 const STEPS = ["About you", "The report", "Where it happened"];
 
 /**
- * The assistant's one tool: an inline, three-step report filer that posts
- * through the same server actions as /dashboard/report/new.
- * ponytail: no map pin here — the chat column is narrow and the selects are
- * enough to route it. Drop LocationMap in if pin accuracy starts mattering.
+ * An inline, three-step report filer that posts through the same server actions
+ * as /dashboard/report/new — including the map pin, so reports filed from chat
+ * carry coordinates and show up on the map tool.
  */
 export function ReportTool({
   firstName = "",
@@ -56,8 +64,10 @@ export function ReportTool({
   const uid = useId();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [locating, setLocating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [caseNumber, setCaseNumber] = useState("");
+  const [pin, setPin] = useState<LatLng | null>(null);
 
   const [reportTypes, setReportTypes] = useState<(Option & { code: string })[]>(
     [],
@@ -124,6 +134,37 @@ export function ReportTool({
     setBarangays(value ? await getBarangays(value) : []);
   }
 
+  /** A pin both files the coordinates and fills in whatever area it matches. */
+  async function handlePin(position: LatLng) {
+    setPin(position);
+    setLocating(true);
+    try {
+      const found = await resolveLocation(position[0], position[1]);
+      if (!found.region) {
+        toast.info(
+          "Couldn't match that pin to a region — pick the area above.",
+        );
+        return;
+      }
+      setProvinces(found.provinces ?? []);
+      setMunicipalities(found.municipalities ?? []);
+      setBarangays(found.barangays ?? []);
+      setForm((f) => ({
+        ...f,
+        region_code: found.region?.id ?? "",
+        province_code: found.province?.id ?? "",
+        municipality_code: found.municipality?.id ?? "",
+        barangay_code: found.barangay?.id ?? "",
+      }));
+      if (found.barangay) toast.success("Location filled in from your pin.");
+      else toast.info("Filled in what matched — finish the rest above.");
+    } catch {
+      toast.error("Location lookup failed. Pick the area above.");
+    } finally {
+      setLocating(false);
+    }
+  }
+
   const filled: Record<number, boolean> = {
     0: Boolean(
       form.first_name &&
@@ -157,6 +198,8 @@ export function ReportTool({
         ...form,
         category_name: reportTypes.find((t) => t.code === form.report_type)
           ?.name,
+        latitude: pin?.[0] ?? null,
+        longitude: pin?.[1] ?? null,
       });
       setCaseNumber(result.case_number);
     } catch (err) {
@@ -361,6 +404,41 @@ export function ReportTool({
                   disabled={!form.municipality_code}
                 />
               </Field>
+              <div className="space-y-1.5 sm:col-span-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Pin the exact spot (optional)
+                  </Label>
+                  {pin && (
+                    <button
+                      type="button"
+                      onClick={() => setPin(null)}
+                      className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      Clear pin
+                    </button>
+                  )}
+                </div>
+                <LocationMap
+                  value={pin}
+                  onChange={handlePin}
+                  className="z-0 h-56 min-h-0 rounded-xl border"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {locating ? (
+                    "Looking up the address…"
+                  ) : pin ? (
+                    <>
+                      Pinned at{" "}
+                      <span className="font-mono">
+                        {pin[0].toFixed(5)}, {pin[1].toFixed(5)}
+                      </span>
+                    </>
+                  ) : (
+                    "Click the map to drop a pin — it fills in the area above."
+                  )}
+                </p>
+              </div>
             </div>
           )}
         </div>
