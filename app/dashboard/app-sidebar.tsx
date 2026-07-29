@@ -7,10 +7,11 @@ import {
   FileText,
   ClipboardList,
   Bot,
+  MapPinned,
   Sparkles,
-  ShieldCheck,
   LogOut,
   User,
+  Users,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -51,7 +52,25 @@ const adminLinks = [
   {
     href: "/admin",
     label: "Admin Dashboard",
-    icon: ShieldCheck,
+    icon: LayoutDashboard,
+    hidden: false,
+  },
+  {
+    href: "/admin/reports",
+    label: "All Reports",
+    icon: ClipboardList,
+    hidden: false,
+  },
+  {
+    href: "/admin/map",
+    label: "Reports Map",
+    icon: MapPinned,
+    hidden: false,
+  },
+  {
+    href: "/admin/users",
+    label: "Users",
+    icon: Users,
     hidden: false,
   },
 ];

@@ -74,6 +74,7 @@ export interface Report {
   created_at: string;
   latitude: number | null;
   longitude: number | null;
+  reporter?: string;
 }
 
 const LocationMap = dynamic(() => import("@/components/location-map"), {
@@ -81,12 +82,15 @@ const LocationMap = dynamic(() => import("@/components/location-map"), {
   loading: () => <Skeleton className="h-48 w-full rounded-xl" />,
 });
 
-function buildColumns(actions: {
-  onView: (report: Report) => void;
-  onEdit: (report: Report) => void;
-  onDelete: (report: Report) => void;
-}): ColumnDef<Report>[] {
-  return [
+function buildColumns(
+  actions: {
+    onView: (report: Report) => void;
+    onEdit: (report: Report) => void;
+    onDelete: (report: Report) => void;
+  },
+  readOnly = false,
+): ColumnDef<Report>[] {
+  const columns: ColumnDef<Report>[] = [
     {
       accessorKey: "title",
       header: "Report",
@@ -147,30 +151,52 @@ function buildColumns(actions: {
           >
             <Eye className="size-3.5" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Edit ${row.original.title}`}
-            onClick={() => actions.onEdit(row.original)}
-          >
-            <Pencil className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Delete ${row.original.title}`}
-            className="text-muted-foreground hover:text-destructive"
-            onClick={() => actions.onDelete(row.original)}
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
+          {!readOnly && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Edit ${row.original.title}`}
+                onClick={() => actions.onEdit(row.original)}
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Delete ${row.original.title}`}
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => actions.onDelete(row.original)}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
   ];
+
+  if (readOnly) {
+    columns.splice(1, 0, {
+      accessorKey: "reporter",
+      header: "Reporter",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.reporter}</span>
+      ),
+    });
+  }
+
+  return columns;
 }
 
-export function ReportsTable({ reports }: { reports: Report[] }) {
+export function ReportsTable({
+  reports,
+  readOnly = false,
+}: {
+  reports: Report[];
+  readOnly?: boolean;
+}) {
   const [selected, setSelected] = useState<Report | null>(null);
   const [editing, setEditing] = useState<Report | null>(null);
   const [deleting, setDeleting] = useState<Report | null>(null);
@@ -181,12 +207,15 @@ export function ReportsTable({ reports }: { reports: Report[] }) {
 
   const columns = useMemo(
     () =>
-      buildColumns({
-        onView: setSelected,
-        onEdit: setEditing,
-        onDelete: setDeleting,
-      }),
-    [],
+      buildColumns(
+        {
+          onView: setSelected,
+          onEdit: setEditing,
+          onDelete: setDeleting,
+        },
+        readOnly,
+      ),
+    [readOnly],
   );
 
   const table = useReactTable({
@@ -207,15 +236,19 @@ export function ReportsTable({ reports }: { reports: Report[] }) {
         <ClipboardList className="size-6 text-primary" />
         <p className="mt-4 font-semibold tracking-tight">No reports yet</p>
         <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-          File your first report and follow it here by reference number.
+          {readOnly
+            ? "No citizen reports have been submitted."
+            : "File your first report and follow it here by reference number."}
         </p>
-        <Link
-          href="/dashboard/report/new"
-          className={buttonVariants({ className: "mt-6" })}
-        >
-          <Plus className="size-4" />
-          Submit a report
-        </Link>
+        {!readOnly && (
+          <Link
+            href="/dashboard/report/new"
+            className={buttonVariants({ className: "mt-6" })}
+          >
+            <Plus className="size-4" />
+            Submit a report
+          </Link>
+        )}
       </div>
     );
   }
@@ -334,6 +367,11 @@ export function ReportsTable({ reports }: { reports: Report[] }) {
                     <DialogDescription className="font-mono text-xs tracking-wider">
                       Reference {selected.report_api_id}
                     </DialogDescription>
+                    {selected.reporter && (
+                      <p className="text-xs text-muted-foreground">
+                        Reported by {selected.reporter}
+                      </p>
+                    )}
                   </div>
                 </div>
               </DialogHeader>
@@ -431,13 +469,19 @@ export function ReportsTable({ reports }: { reports: Report[] }) {
         </DialogContent>
       </Dialog>
 
-      <EditReportDialog
-        key={editing?.id ?? "none"}
-        report={editing}
-        onClose={() => setEditing(null)}
-      />
-
-      <DeleteReportDialog report={deleting} onClose={() => setDeleting(null)} />
+      {!readOnly && (
+        <>
+          <EditReportDialog
+            key={editing?.id ?? "none"}
+            report={editing}
+            onClose={() => setEditing(null)}
+          />
+          <DeleteReportDialog
+            report={deleting}
+            onClose={() => setDeleting(null)}
+          />
+        </>
+      )}
     </>
   );
 }
