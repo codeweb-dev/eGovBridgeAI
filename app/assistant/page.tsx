@@ -17,7 +17,7 @@ export default async function AssistantPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("users")
-      .select("full_name, email")
+      .select("full_name, email, gender")
       .eq("id", userId)
       .single(),
   ]);
@@ -30,6 +30,7 @@ export default async function AssistantPage() {
       firstName={firstName || "there"}
       lastName={rest.join(" ")}
       email={user?.email ?? ""}
+      gender={user?.gender ?? ""}
     />
   );
 }

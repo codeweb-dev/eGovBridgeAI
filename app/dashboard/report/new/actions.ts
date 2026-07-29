@@ -1,6 +1,11 @@
 "use server";
 
 import * as ereport from "@/lib/ereport";
+import {
+  askAssistant,
+  buildReportDraftPrompt,
+  parseReportDraftResponse,
+} from "@/lib/egov-ai";
 import { getSession } from "@/lib/session";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -22,6 +27,36 @@ export async function getMunicipalities(provinceCode: string) {
 
 export async function getBarangays(municipalityCode: string) {
   return ereport.getBarangays(municipalityCode);
+}
+
+export async function improveReportDraft(input: {
+  title?: string;
+  category?: string;
+  description: string;
+}) {
+  const userId = await getSession();
+  if (!userId) throw new Error("Not authenticated");
+  if (typeof input?.description !== "string") {
+    throw new Error("Enter a description first.");
+  }
+
+  const description = input.description.trim();
+  if (!description || description.length > 2000) {
+    throw new Error("Enter a description up to 2,000 characters.");
+  }
+
+  const response = await askAssistant(
+    buildReportDraftPrompt({
+      title: typeof input.title === "string" ? input.title.trim().slice(0, 200) : "",
+      category:
+        typeof input.category === "string"
+          ? input.category.trim().slice(0, 200)
+          : "",
+      description,
+    }),
+  );
+
+  return parseReportDraftResponse(response);
 }
 
 const NOISE = new Set([

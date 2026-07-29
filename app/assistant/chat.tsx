@@ -183,11 +183,13 @@ export function Chat({
   firstName,
   lastName,
   email,
+  gender,
 }: {
   history: ChatEntry[];
   firstName: string;
   lastName: string;
   email: string;
+  gender: string;
 }) {
   const [chats, setChats] = useState(history);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -455,6 +457,7 @@ export function Chat({
                               firstName={firstName}
                               lastName={lastName}
                               email={email}
+                              gender={gender}
                             />
                           )}
                           {m.tool && m.tool !== "report" && (

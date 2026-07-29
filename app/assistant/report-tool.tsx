@@ -56,10 +56,12 @@ export function ReportTool({
   firstName = "",
   lastName = "",
   email = "",
+  gender = "",
 }: {
   firstName?: string;
   lastName?: string;
   email?: string;
+  gender?: string;
 }) {
   const uid = useId();
   const [step, setStep] = useState(0);
@@ -80,7 +82,7 @@ export function ReportTool({
   const [form, setForm] = useState({
     first_name: firstName,
     last_name: lastName,
-    gender: "",
+    gender,
     complainant_email: email,
     report_type: "",
     subject: "",

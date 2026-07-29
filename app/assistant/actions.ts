@@ -15,17 +15,39 @@ export interface ChatEntry {
 export async function sendMessage(prompt: string): Promise<ChatEntry> {
   const userId = await getSession();
   if (!userId) throw new Error("Not authenticated");
+  const question = prompt.trim();
+  if (!question || question.length > 2000) {
+    throw new Error("Enter a question up to 2,000 characters.");
+  }
 
-  const response = await askAssistant(prompt);
+  const supabase = getSupabaseAdmin();
+  const { data: user, error: userError } = await supabase
+    .from("users")
+    .select("full_name, email, phone, gender")
+    .eq("id", userId)
+    .single();
+  if (userError || !user) throw new Error("User profile not found.");
 
-  const { data } = await getSupabaseAdmin()
+  const response = await askAssistant(question, {
+    fullName: user.full_name,
+    email: user.email,
+    phone: user.phone,
+    gender: user.gender,
+  });
+
+  const { data } = await supabase
     .from("ai_history")
-    .insert({ user_id: userId, prompt, response, kind: "assistant" })
+    .insert({ user_id: userId, prompt: question, response, kind: "assistant" })
     .select("id, prompt, response, created_at")
     .single();
 
   // The answer is worth showing even if we failed to record it.
-  return data ?? { id: `local-${Date.now()}`, prompt, response, created_at: new Date().toISOString() };
+  return data ?? {
+    id: `local-${Date.now()}`,
+    prompt: question,
+    response,
+    created_at: new Date().toISOString(),
+  };
 }
 
 /** Reverse-geocode a pin to a readable place name for the prompt. Falls back to coordinates. */

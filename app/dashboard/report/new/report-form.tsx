@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectTrigger,
@@ -24,6 +25,7 @@ import {
   getProvinces,
   getMunicipalities,
   getBarangays,
+  improveReportDraft,
   submitReport,
   resolveLocation,
 } from "./actions";
@@ -77,6 +79,7 @@ export function ReportForm({
 
   const [loading, setLoading] = useState(true);
   const [locating, setLocating] = useState(false);
+  const [improving, setImproving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -136,6 +139,29 @@ export function ReportForm({
       toast.error("Location lookup failed. Pick the area manually.");
     } finally {
       setLocating(false);
+    }
+  }
+
+  async function handleImproveReport() {
+    if (!message.trim() || improving) return;
+    setImproving(true);
+    try {
+      const improved = await improveReportDraft({
+        title: subject,
+        category: reportTypes.find((type) => type.code === reportType)?.name,
+        description: message,
+      });
+      setSubject(improved.title);
+      setMessage(improved.description);
+      toast.success("Title and description improved. Review them before submitting.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to improve the report.",
+      );
+    } finally {
+      setImproving(false);
     }
   }
 
@@ -261,6 +287,22 @@ export function ReportForm({
           <div className="space-y-2">
             <Label htmlFor="message">Description</Label>
             <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} required rows={5} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Write a short phrase, then let AI improve the title and
+                description.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleImproveReport}
+                disabled={!message.trim() || improving || submitting}
+              >
+                {improving ? <Spinner /> : <Sparkles className="size-4" />}
+                {improving ? "Improving…" : "Improve title & description"}
+              </Button>
+            </div>
           </div>
         </div>
       </Section>
@@ -373,7 +415,11 @@ export function ReportForm({
         <p className="text-sm text-muted-foreground">
           You&apos;ll get a reference number you can track under My Reports.
         </p>
-        <Button type="submit" disabled={submitting} className="group shrink-0">
+        <Button
+          type="submit"
+          disabled={submitting || improving}
+          className="group shrink-0"
+        >
           {submitting ? "Submitting…" : "Submit Report"}
           {!submitting && (
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
