@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Script from "next/script";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";

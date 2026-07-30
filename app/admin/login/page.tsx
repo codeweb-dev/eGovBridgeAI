@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { ADMIN_EMAIL } from "@/lib/admin";
