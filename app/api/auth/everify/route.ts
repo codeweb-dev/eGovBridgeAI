@@ -5,6 +5,7 @@ import { verifyWithEVerify, type EVerifyInput } from "@/lib/everify";
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const BIRTH_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validName(value: string, required: boolean) {
   return (
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     typeof body.lastName === "string" ? body.lastName.trim() : "";
   const suffix = typeof body.suffix === "string" ? body.suffix.trim() : "";
   const birthDate = typeof body.birthDate === "string" ? body.birthDate : "";
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
 
   if (
@@ -47,6 +49,8 @@ export async function POST(request: Request) {
     !validName(lastName, true) ||
     !validName(suffix, false) ||
     !validBirthDate(birthDate) ||
+    email.length > 254 ||
+    !EMAIL.test(email) ||
     !UUID.test(sessionId)
   ) {
     return Response.json(
@@ -67,9 +71,9 @@ export async function POST(request: Request) {
     const userProfile: Record<string, string> = {
       phone: profile.phone,
       full_name: profile.fullName,
+      email: profile.email ?? email,
       role: "user",
     };
-    if (profile.email) userProfile.email = profile.email;
     if (profile.gender) userProfile.gender = profile.gender;
 
     const supabase = getSupabaseAdmin();

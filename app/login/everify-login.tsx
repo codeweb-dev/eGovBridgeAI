@@ -67,6 +67,7 @@ export function EVerifyLogin() {
           lastName: form.get("lastName"),
           suffix: form.get("suffix"),
           birthDate: form.get("birthDate"),
+          email: form.get("email"),
           sessionId,
         }),
       });
@@ -180,6 +181,17 @@ export function EVerifyLogin() {
                   name="birthDate"
                   type="date"
                   autoComplete="bday"
+                  required
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="everify-email">Email address</Label>
+                <Input
+                  id="everify-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  maxLength={254}
                   required
                 />
               </div>
